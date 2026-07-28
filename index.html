@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NYC Resident Tax &amp; IRMAA Estimator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-logo">
+                <span class="logo-icon">📊</span>
+                <h1>NYC Tax &amp; IRMAA Estimator</h1>
+            </div>
+            <div class="header-meta">
+                <span class="badge" id="year-badge">2026 Tax Year</span>
+                <span class="badge badge-muted" id="year-projected-badge" style="display: none;">Projected</span>
+                <span class="badge">Married Filing Jointly</span>
+                <span class="badge">NYC Resident</span>
+            </div>
+        </header>
+
+        <div id="error-banner" class="error-banner" hidden></div>
+
+        <!-- Main Content (2-Panel Grid) -->
+        <main class="main-content">
+            <!-- Left Panel: Inputs -->
+            <section class="panel-left">
+                <div class="card glass-card">
+                    <h2 class="card-title">Income &amp; Deductions</h2>
+                    <form id="calculator-form" class="inputs-form">
+
+                        <div class="form-section">
+                            <h3>Tax Year</h3>
+                            <div class="input-group">
+                                <label for="year">Tax Year</label>
+                                <select id="year" name="year" class="year-select" required>
+                                    <option value="2025">2025</option>
+                                    <option value="2026" selected>2026</option>
+                                    <option value="2027">2027 (projected)</option>
+                                </select>
+                                <span class="input-help" id="year-help">Brackets and IRMAA thresholds for the selected tax year.</span>
+                            </div>
+                        </div>
+                        
+                        <div class="form-section">
+                            <h3>Ordinary Income</h3>
+                            <div class="input-group">
+                                <label for="pension">Pension Income (Taxable)</label>
+                                <div class="input-wrapper">
+                                    <span class="currency-symbol">$</span>
+                                    <input type="number" id="pension" name="pension" value="104000" min="0" step="any" required>
+                                </div>
+                            </div>
+                            
+                            <div class="input-group">
+                                <label for="ira_dist">Traditional IRA Distributions</label>
+                                <div class="input-wrapper">
+                                    <span class="currency-symbol">$</span>
+                                    <input type="number" id="ira_dist" name="ira_dist" value="120000" min="0" step="any" required>
+                                </div>
+                            </div>
+
+                            <div class="input-group">
+                                <label for="roth_conv">Roth Conversions</label>
+                                <div class="input-wrapper">
+                                    <span class="currency-symbol">$</span>
+                                    <input type="number" id="roth_conv" name="roth_conv" value="50000" min="0" step="any" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h3>Investment Income</h3>
+                            <div class="input-group">
+                                <label for="interest">Taxable Interest</label>
+                                <div class="input-wrapper">
+                                    <span class="currency-symbol">$</span>
+                                    <input type="number" id="interest" name="interest" value="5000" min="0" step="any" required>
+                                </div>
+                            </div>
+
+                            <div class="input-row">
+                                <div class="input-group">
+                                    <label for="ordinary_dividends">Ordinary Dividends (Total)</label>
+                                    <div class="input-wrapper">
+                                        <span class="currency-symbol">$</span>
+                                        <input type="number" id="ordinary_dividends" name="ordinary_dividends" value="100000" min="0" step="any" required>
+                                    </div>
+                                </div>
+
+                                <div class="input-group">
+                                    <label for="qualified_dividends">Qualified Portion</label>
+                                    <div class="input-wrapper">
+                                        <span class="currency-symbol">$</span>
+                                        <input type="number" id="qualified_dividends" name="qualified_dividends" value="90000" min="0" step="any" required>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="input-group">
+                                <label for="tax_exempt">Tax-Exempt Dividends/Interest</label>
+                                <div class="input-wrapper">
+                                    <span class="currency-symbol">$</span>
+                                    <input type="number" id="tax_exempt" name="tax_exempt" value="20000" min="0" step="any" required>
+                                </div>
+                                <span class="input-help">Excluded from AGI, included in IRMAA MAGI.</span>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h3>Deductions</h3>
+                            <div class="input-group">
+                                <label for="itemized_deductions">Federal Itemized Deductions</label>
+                                <div class="input-wrapper">
+                                    <span class="currency-symbol">$</span>
+                                    <input type="number" id="itemized_deductions" name="itemized_deductions" value="50000" min="0" step="any" required>
+                                </div>
+                                <span class="input-help" id="fed-standard-help">2026 MFJ Standard Deduction is $32,200.</span>
+                            </div>
+
+                            <div class="input-group">
+                                <label for="state_itemized_deductions">NYS/NYC Itemized Deductions</label>
+                                <div class="input-wrapper">
+                                    <span class="currency-symbol">$</span>
+                                    <input type="number" id="state_itemized_deductions" name="state_itemized_deductions" placeholder="Auto-calculated" min="0" step="any">
+                                </div>
+                                <span class="input-help">Defaults to the larger of your Federal Itemized or $16,050 NYS Standard.</span>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn-calculate">Recalculate Estimates</button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- Right Panel: Outputs -->
+            <section class="panel-right">
+                <!-- Summary KPI Cards -->
+                <div class="summary-kpi-grid">
+                    <div class="kpi-card bg-gradient-purple">
+                        <div class="kpi-label">Total Tax Liability</div>
+                        <div class="kpi-val" id="kpi-total-tax">$0.00</div>
+                        <div class="kpi-sub" id="kpi-eff-rate">0.00% Effective Rate</div>
+                    </div>
+                    <div class="kpi-card bg-gradient-green">
+                        <div class="kpi-label">Net After-Tax Income</div>
+                        <div class="kpi-val" id="kpi-net-income">$0.00</div>
+                        <div class="kpi-sub" id="kpi-agi">on $0.00 AGI</div>
+                    </div>
+                </div>
+
+                <!-- Medicare IRMAA Surcharges -->
+                <div class="card irmaa-card">
+                    <div class="card-header">
+                        <h2 class="card-title" id="irmaa-title">Medicare IRMAA Tier (2026)</h2>
+                        <span class="irmaa-badge" id="irmaa-tier-badge">Tier 1</span>
+                    </div>
+                    
+                    <div class="irmaa-meter-wrapper">
+                        <div class="irmaa-meter">
+                            <div class="irmaa-marker" id="irmaa-marker-current"></div>
+                            <div class="irmaa-bracket-step active">T1</div>
+                            <div class="irmaa-bracket-step">T2</div>
+                            <div class="irmaa-bracket-step">T3</div>
+                            <div class="irmaa-bracket-step">T4</div>
+                            <div class="irmaa-bracket-step">T5</div>
+                            <div class="irmaa-bracket-step">T6</div>
+                        </div>
+                    </div>
+
+                    <div class="irmaa-details-grid">
+                        <div class="irmaa-detail-item">
+                            <span class="label">IRMAA MAGI</span>
+                            <span class="val text-highlight" id="irmaa-magi-val">$0.00</span>
+                        </div>
+                        <div class="irmaa-detail-item">
+                            <span class="label">Part B Monthly (Per Person)</span>
+                            <span class="val" id="irmaa-part-b-val">$0.00</span>
+                        </div>
+                        <div class="irmaa-detail-item">
+                            <span class="label">Part D Monthly (Per Person)</span>
+                            <span class="val" id="irmaa-part-d-val">$0.00</span>
+                        </div>
+                    </div>
+                    <div class="irmaa-yearly-msg" id="irmaa-annual-total">
+                        Total annual surcharge: $0.00/yr (per person)
+                    </div>
+                </div>
+
+                <!-- Detailed Liabilities Card -->
+                <div class="card liabilities-card">
+                    <h2 class="card-title">Tax Breakdown</h2>
+                    <ul class="liabilities-list">
+                        <li>
+                            <div class="liab-row">
+                                <span class="label">Federal Income Tax</span>
+                                <span class="val font-semibold" id="liab-fed-tax">$0.00</span>
+                            </div>
+                        </li>
+                        <li>
+                            <div class="liab-row">
+                                <span class="label">Net Investment Income Tax (NIIT)</span>
+                                <span class="val" id="liab-niit-tax">$0.00</span>
+                            </div>
+                        </li>
+                        <li>
+                            <div class="liab-row">
+                                <span class="label">NY State Income Tax</span>
+                                <span class="val font-semibold" id="liab-nys-tax">$0.00</span>
+                            </div>
+                        </li>
+                        <li>
+                            <div class="liab-row">
+                                <span class="label">NYC Local Income Tax</span>
+                                <span class="val font-semibold" id="liab-nyc-tax">$0.00</span>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Progressive Bracket Details (Accordion) -->
+                <div class="bracket-details-accordions">
+                    <h2 class="section-title">Marginal Bracket Breakdowns</h2>
+                    
+                    <details class="bracket-accordion">
+                        <summary>Federal Ordinary Income Brackets <span class="acc-tax" id="acc-tax-fed-ord">$0.00</span></summary>
+                        <div class="accordion-content">
+                            <table class="bracket-table" id="table-fed-ord">
+                                <thead>
+                                    <tr>
+                                        <th>Range</th>
+                                        <th>Taxable Amt</th>
+                                        <th>Rate</th>
+                                        <th>Tax Paid</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </details>
+
+                    <details class="bracket-accordion">
+                        <summary>Federal Qualified Dividends Brackets <span class="acc-tax" id="acc-tax-fed-pref">$0.00</span></summary>
+                        <div class="accordion-content">
+                            <table class="bracket-table" id="table-fed-pref">
+                                <thead>
+                                    <tr>
+                                        <th>Range</th>
+                                        <th>Taxable Amt</th>
+                                        <th>Rate</th>
+                                        <th>Tax Paid</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </details>
+
+                    <details class="bracket-accordion">
+                        <summary>NY State Brackets <span class="acc-tax" id="acc-tax-nys">$0.00</span></summary>
+                        <div class="accordion-content">
+                            <table class="bracket-table" id="table-nys">
+                                <thead>
+                                    <tr>
+                                        <th>Range</th>
+                                        <th>Taxable Amt</th>
+                                        <th>Rate</th>
+                                        <th>Tax Paid</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </details>
+
+                    <details class="bracket-accordion">
+                        <summary>NYC Local Brackets <span class="acc-tax" id="acc-tax-nyc">$0.00</span></summary>
+                        <div class="accordion-content">
+                            <table class="bracket-table" id="table-nyc">
+                                <thead>
+                                    <tr>
+                                        <th>Range</th>
+                                        <th>Taxable Amt</th>
+                                        <th>Rate</th>
+                                        <th>Tax Paid</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </details>
+                </div>
+
+                <div class="nys-note" id="recapture-note" style="display: none;">
+                    <strong>Note on NYS Recapture:</strong> For NYS Adjusted Gross Income exceeding $107,650, NYS applies a 'benefit recapture' supplement that phases out the benefits of lower tax brackets, which may increase actual state tax liability.
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
