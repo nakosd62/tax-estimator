@@ -11,7 +11,7 @@ import math
 import os
 import sys
 
-PORT = 8001
+PORT = int(os.environ.get("PORT", 8001))
 
 # Year-by-Year Tax Parametrization
 TAX_DATA = {
