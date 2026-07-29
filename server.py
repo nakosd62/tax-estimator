@@ -36,11 +36,11 @@ TAX_DATA = {
             (17150.0, 0.0400),
             (23600.0, 0.0450),
             (27900.0, 0.0525),
-            (43000.0, 0.0550),
-            (161550.0, 0.0600),
-            (215400.0, 0.0625),
+            (161550.0, 0.0550),
+            (323200.0, 0.0600),
             (2155350.0, 0.0685),
-            (5388350.0, 0.0965),
+            (5000000.0, 0.0965),
+            (25000000.0, 0.1030),
             (float('inf'), 0.1090)
         ],
         "nyc": [
@@ -76,11 +76,11 @@ TAX_DATA = {
             (float('inf'), 0.20)
         ],
         "nys": [
-            (17150.0, 0.0390),
-            (23400.0, 0.0440),
-            (27900.0, 0.0515),
-            (161550.0, 0.0540),
-            (430800.0, 0.0590),
+            (17150.0, 0.0400),
+            (23600.0, 0.0450),
+            (27900.0, 0.0525),
+            (161550.0, 0.0550),
+            (323200.0, 0.0600),
             (2155350.0, 0.0685),
             (5000000.0, 0.0965),
             (25000000.0, 0.1030),
@@ -97,12 +97,12 @@ TAX_DATA = {
             {"limit": 274000.0, "tier": 2, "part_b": 81.20, "part_d": 14.50},
             {"limit": 342000.0, "tier": 3, "part_b": 202.90, "part_d": 37.50},
             {"limit": 410000.0, "tier": 4, "part_b": 324.60, "part_d": 60.40},
-            {"limit": 749999.0, "tier": 5, "part_b": 446.30, "part_d": 83.30},
+            {"limit": 750000.0, "tier": 5, "part_b": 446.30, "part_d": 83.30},
             {"limit": float('inf'), "tier": 6, "part_b": 487.00, "part_d": 91.00}
         ]
     },
     "2027": {
-        # Projected 2.5% inflation adjustments over 2026 (rounded)
+        # Projected 2.5% CPI adjustment over 2026
         "fed_deduction": 33000.0,
         "state_deduction": 16050.0,
         "fed_ordinary": [
@@ -120,11 +120,11 @@ TAX_DATA = {
             (float('inf'), 0.20)
         ],
         "nys": [
-            (17600.0, 0.0390),
-            (24000.0, 0.0440),
-            (28600.0, 0.0515),
-            (165600.0, 0.0540),
-            (441550.0, 0.0590),
+            (17600.0, 0.0400),
+            (24200.0, 0.0450),
+            (28600.0, 0.0525),
+            (165600.0, 0.0550),
+            (331300.0, 0.0600),
             (2209250.0, 0.0685),
             (5125000.0, 0.0965),
             (25625000.0, 0.1030),
@@ -146,7 +146,6 @@ TAX_DATA = {
         ]
     }
 }
-
 
 def json_safe(value):
     """Convert values that aren't strict JSON (e.g. Infinity) for browser parsing."""
@@ -235,6 +234,8 @@ def perform_calculations(data: dict) -> dict:
 
     params = TAX_DATA[year]
 
+    # Parse inputs (Added wages)
+    wages = float(data.get("wages", 0))
     pension = float(data.get("pension", 0))
     ira_dist = float(data.get("ira_dist", 0))
     roth_conv = float(data.get("roth_conv", 0))
@@ -256,13 +257,13 @@ def perform_calculations(data: dict) -> dict:
     # Derived
     non_qualified_dividends = max(0.0, ord_dividends - q_dividends)
     
-    # 1. AGI
-    ordinary_income = pension + ira_dist + roth_conv + interest + non_qualified_dividends
+    # 1. AGI (Updated to include wages)
+    ordinary_income = wages + pension + ira_dist + roth_conv + interest + non_qualified_dividends
     agi = ordinary_income + q_dividends
 
     # 2. Federal Taxable
     fed_taxable = max(0.0, agi - fed_deductions)
-
+    
     # 3. State Taxable
     nys_taxable = max(0.0, agi - state_deductions)
 
