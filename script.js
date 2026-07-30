@@ -1,60 +1,100 @@
 document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('calculator-form');
     const yearSelect = document.getElementById('year');
+    const stateSelect = document.getElementById('state');
+    const filingStatusSelect = document.getElementById('filing_status');
     const inputs = form.querySelectorAll('input[type="number"]');
 
+    // Federal standard deductions by tax year and filing status
     const YEAR_INFO = {
-        '2025': { fedStandard: 31500, stateStandard: 16050, projected: false },
-        '2026': { fedStandard: 32200, stateStandard: 16050, projected: false },
-        '2027': { fedStandard: 33000, stateStandard: 16050, projected: true },
+        '2025': {
+            projected: false,
+            fedStandard: { MFJ: 31500, SINGLE: 15750, MFS: 15750, HOH: 23600 }
+        },
+        '2026': {
+            projected: false,
+            fedStandard: { MFJ: 32200, SINGLE: 16100, MFS: 16100, HOH: 24150 }
+        },
+        '2027': {
+            projected: true,
+            fedStandard: { MFJ: 33000, SINGLE: 16500, MFS: 16500, HOH: 24750 }
+        },
     };
 
     const formatDeduction = (amount) =>
         new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(amount);
 
-    const updateYearLabels = (year) => {
+    const updateYearLabels = (year, state, filingStatus) => {
         const info = YEAR_INFO[year] || YEAR_INFO['2026'];
-        document.getElementById('year-badge').innerText = `${year} Tax Year`;
-        document.getElementById('year-projected-badge').style.display = info.projected ? 'inline' : 'none';
-        document.getElementById('irmaa-title').innerText = `Medicare IRMAA Tier (${year})`;
-        document.getElementById('fed-standard-help').innerText =
-            `${year} MFJ Standard Deduction is ${formatDeduction(info.fedStandard)}.`;
-        document.getElementById('year-help').innerText = info.projected
-            ? '2027 brackets and IRMAA thresholds are projected (~2.5% inflation over 2026).'
-            : 'Brackets and IRMAA thresholds for the selected tax year.';
-        document.title = `NYC Tax & IRMAA Estimator (${year})`;
+        const statusKey = filingStatus || 'MFJ';
+        const stdDeduction = info.fedStandard[statusKey] || info.fedStandard['MFJ'];
+
+        // Safe updates with null checks
+        const yearBadge = document.getElementById('year-badge');
+        if (yearBadge) yearBadge.innerText = `${year} Tax Year`;
+
+        const yearProjBadge = document.getElementById('year-projected-badge');
+        if (yearProjBadge) yearProjBadge.style.display = info.projected ? 'inline' : 'none';
+        
+        const stateOption = stateSelect ? stateSelect.querySelector(`option[value="${state}"]`) : null;
+        const stateText = stateOption ? stateOption.text.split(' (')[0] : state;
+        
+        const stateBadge = document.getElementById('state-badge');
+        if (stateBadge) stateBadge.innerText = `${stateText} Resident`;
+
+        // Update Filing Status Badge
+        const statusOption = filingStatusSelect ? filingStatusSelect.querySelector(`option[value="${statusKey}"]`) : null;
+        const statusBadge = document.getElementById('status-badge');
+        if (statusBadge && statusOption) {
+            statusBadge.innerText = statusOption.text;
+        }
+
+        const irmaaTitle = document.getElementById('irmaa-title');
+        if (irmaaTitle) irmaaTitle.innerText = `Medicare IRMAA Tier (${year})`;
+        
+        const statusTextShort = statusOption ? statusOption.text : 'MFJ';
+        const fedHelp = document.getElementById('fed-standard-help');
+        if (fedHelp) {
+            fedHelp.innerText = `${year} ${statusTextShort} Standard Deduction is ${formatDeduction(stdDeduction)}.`;
+        }
+
+        const yearHelp = document.getElementById('year-help');
+        if (yearHelp) {
+            yearHelp.innerText = info.projected
+                ? '2027 brackets and IRMAA thresholds are projected (~2.5% inflation over 2026).'
+                : 'Brackets and IRMAA thresholds for selected parameters.';
+        }
+
+        document.title = `Tax Estimator`;
     };
 
-    // Currency Formatter
     const formatCurrency = (val) => {
         return new Intl.NumberFormat('en-US', {
             style: 'currency',
             currency: 'USD',
             maximumFractionDigits: 2
-        }).format(val);
+        }).format(val || 0);
     };
 
-    // Percentage Formatter
     const formatPercent = (val) => {
         return new Intl.NumberFormat('en-US', {
             style: 'percent',
             minimumFractionDigits: 2,
             maximumFractionDigits: 2
-        }).format(val);
+        }).format(val || 0);
     };
 
-    // Calculate functions
     const triggerCalculation = async () => {
         const year = yearSelect.value;
-        const formData = { year };
+        const state = stateSelect.value;
+        const filing_status = filingStatusSelect ? filingStatusSelect.value : 'MFJ';
+        const formData = { year, state, filing_status };
 
         inputs.forEach(input => {
-            formData[input.name] = input.value === "" ? null : parseFloat(input.value);
+            formData[input.name] = input.value === "" ? 0 : parseFloat(input.value);
         });
 
-        // Simple validation check before submitting
         if (formData.qualified_dividends > formData.ordinary_dividends) {
-            // Qualified dividends cannot exceed ordinary dividends
             document.getElementById('qualified_dividends').setCustomValidity('Qualified dividends cannot exceed total ordinary dividends.');
             form.reportValidity();
             return;
@@ -76,14 +116,13 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 data = JSON.parse(raw);
             } catch (parseError) {
-                showError('Could not parse server response. Restart with: python3 server.py');
+                showError('Could not parse server response.');
                 console.error('JSON parse error:', parseError, raw.slice(0, 200));
                 return;
             }
 
             if (!response.ok) {
                 showError(data.error || 'Calculation failed.');
-                console.error("API error:", data);
                 return;
             }
 
@@ -91,9 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
             updateUI(data);
 
         } catch (e) {
-            showError(window.location.protocol === 'file:'
-                ? 'Open via the local server: python3 server.py → http://localhost:8001'
-                : 'Could not reach the calculator server. Run: python3 server.py');
+            showError('Could not reach calculator server.');
             console.error("Error during calculation:", e);
         }
     };
@@ -113,41 +150,84 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // Update UI elements
     const updateUI = (data) => {
-        if (data.year && yearSelect.value !== data.year) {
-            yearSelect.value = data.year;
+        const currentYear = data.year || yearSelect.value;
+        const currentState = data.state || stateSelect.value;
+        const currentFilingStatus = data.filing_status || (filingStatusSelect ? filingStatusSelect.value : 'MFJ');
+        
+        updateYearLabels(currentYear, currentState, currentFilingStatus);
+
+        // Dynamic State Labels
+        const stateLabel = document.getElementById('liab-state-label');
+        if (stateLabel) stateLabel.innerText = `${currentState} State Income Tax`;
+        
+        const stateTitle = document.getElementById('summary-state-title');
+        if (stateTitle) stateTitle.innerText = `${currentState} State Tax Brackets`;
+
+        // Handle Local Tax UI visibility (NYC specific)
+        const localContainer = document.getElementById('liab-local-container');
+        const localAccordion = document.getElementById('accordion-local');
+        if (data.nyc_tax !== undefined && currentState === 'NY' && data.nyc_tax > 0) {
+            if (localContainer) localContainer.style.display = 'list-item';
+            if (localAccordion) localAccordion.style.display = 'block';
+            
+            const liabNycTax = document.getElementById('liab-nyc-tax');
+            if (liabNycTax) liabNycTax.innerText = formatCurrency(data.nyc_tax);
+            
+            const accTaxNyc = document.getElementById('acc-tax-nyc');
+            if (accTaxNyc) accTaxNyc.innerText = formatCurrency(data.nyc_tax);
+            
+            renderBracketTable('table-nyc', data.nyc_breakdown);
+        } else {
+            if (localContainer) localContainer.style.display = 'none';
+            if (localAccordion) localAccordion.style.display = 'none';
         }
-        updateYearLabels(data.year || yearSelect.value);
 
         // KPI Summary Cards
-        document.getElementById('kpi-total-tax').innerText = formatCurrency(data.total_tax);
-        document.getElementById('kpi-eff-rate').innerText = `${formatPercent(data.effective_rate)} Effective Rate`;
-        document.getElementById('kpi-net-income').innerText = formatCurrency(data.net_income);
-        document.getElementById('kpi-agi').innerText = `on ${formatCurrency(data.agi)} AGI`;
+        const kpiTotalTax = document.getElementById('kpi-total-tax');
+        if (kpiTotalTax) kpiTotalTax.innerText = formatCurrency(data.total_tax);
 
-        // Detailed Liabilities
-        document.getElementById('liab-fed-tax').innerText = formatCurrency(data.fed_tax);
-        document.getElementById('liab-niit-tax').innerText = formatCurrency(data.niit);
-        document.getElementById('liab-nys-tax').innerText = formatCurrency(data.nys_tax);
-        document.getElementById('liab-nyc-tax').innerText = formatCurrency(data.nyc_tax);
+        const kpiEffRate = document.getElementById('kpi-eff-rate');
+        if (kpiEffRate) kpiEffRate.innerText = `${formatPercent(data.effective_rate)} Effective Rate`;
+
+        const kpiNetIncome = document.getElementById('kpi-net-income');
+        if (kpiNetIncome) kpiNetIncome.innerText = formatCurrency(data.net_income);
+
+        const kpiAgi = document.getElementById('kpi-agi');
+        if (kpiAgi) kpiAgi.innerText = `on ${formatCurrency(data.agi)} AGI`;
+
+        // Liabilities
+        const liabFedTax = document.getElementById('liab-fed-tax');
+        if (liabFedTax) liabFedTax.innerText = formatCurrency(data.fed_tax);
+
+        const liabNiitTax = document.getElementById('liab-niit-tax');
+        if (liabNiitTax) liabNiitTax.innerText = formatCurrency(data.niit);
+
+        const liabNysTax = document.getElementById('liab-nys-tax');
+        if (liabNysTax) liabNysTax.innerText = formatCurrency(data.nys_tax);
 
         // IRMAA details
-        document.getElementById('irmaa-tier-badge').innerText = `Tier ${data.irmaa_tier}`;
-        document.getElementById('irmaa-magi-val').innerText = formatCurrency(data.irmaa_magi);
-        document.getElementById('irmaa-part-b-val').innerText = formatCurrency(data.irmaa_part_b);
-        document.getElementById('irmaa-part-d-val').innerText = formatCurrency(data.irmaa_part_d);
+        const irmaaBadge = document.getElementById('irmaa-tier-badge');
+        if (irmaaBadge) irmaaBadge.innerText = `Tier ${data.irmaa_tier}`;
+
+        const irmaaMagi = document.getElementById('irmaa-magi-val');
+        if (irmaaMagi) irmaaMagi.innerText = formatCurrency(data.irmaa_magi);
+
+        const irmaaPartB = document.getElementById('irmaa-part-b-val');
+        if (irmaaPartB) irmaaPartB.innerText = formatCurrency(data.irmaa_part_b);
+
+        const irmaaPartD = document.getElementById('irmaa-part-d-val');
+        if (irmaaPartD) irmaaPartD.innerText = formatCurrency(data.irmaa_part_d);
         
         const annualSurcharge = (data.irmaa_part_b + data.irmaa_part_d) * 12;
-        document.getElementById('irmaa-annual-total').innerText = 
-            `Total annual surcharge: ${formatCurrency(annualSurcharge)}/yr (per person)`;
+        const irmaaAnnualTotal = document.getElementById('irmaa-annual-total');
+        if (irmaaAnnualTotal) {
+            irmaaAnnualTotal.innerText = `Total annual surcharge: ${formatCurrency(annualSurcharge)}/yr (per person)`;
+        }
 
-        // Adjust IRMAA Meter Marker
-        // Meter limits ranges roughly from Tier 1 (218k) to Tier 6 (750k+)
+        // Meter step calculation
         const marker = document.getElementById('irmaa-marker-current');
         const steps = document.querySelectorAll('.irmaa-bracket-step');
-        
-        // Remove active class from all steps
         steps.forEach((step, idx) => {
             if (idx + 1 === data.irmaa_tier) {
                 step.classList.add('active');
@@ -156,52 +236,35 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Set position percentage
-        let positionPct = 0;
-        if (data.irmaa_tier === 1) {
-            positionPct = 8;
-        } else if (data.irmaa_tier === 2) {
-            positionPct = 25;
-        } else if (data.irmaa_tier === 3) {
-            positionPct = 42;
-        } else if (data.irmaa_tier === 4) {
-            positionPct = 58;
-        } else if (data.irmaa_tier === 5) {
-            positionPct = 75;
-        } else {
-            positionPct = 92;
+        if (marker) {
+            const posMap = { 1: 8, 2: 25, 3: 42, 4: 58, 5: 75, 6: 92 };
+            marker.style.left = `${posMap[data.irmaa_tier] || 8}%`;
         }
-        marker.style.left = `${positionPct}%`;
 
         // Accordion Totals
-        document.getElementById('acc-tax-fed-ord').innerText = formatCurrency(data.fed_ord_tax);
-        document.getElementById('acc-tax-fed-pref').innerText = formatCurrency(data.fed_pref_tax);
-        document.getElementById('acc-tax-nys').innerText = formatCurrency(data.nys_tax);
-        document.getElementById('acc-tax-nyc').innerText = formatCurrency(data.nyc_tax);
+        const accFedOrd = document.getElementById('acc-tax-fed-ord');
+        if (accFedOrd) accFedOrd.innerText = formatCurrency(data.fed_ord_tax);
 
-        // Recapture warning
-        const note = document.getElementById('recapture-note');
-        if (data.agi > 107650) {
-            note.style.display = 'block';
-        } else {
-            note.style.display = 'none';
-        }
+        const accFedPref = document.getElementById('acc-tax-fed-pref');
+        if (accFedPref) accFedPref.innerText = formatCurrency(data.fed_pref_tax);
 
-        // Render Tables
+        const accNys = document.getElementById('acc-tax-nys');
+        if (accNys) accNys.innerText = formatCurrency(data.nys_tax);
+
+        // Render Bracket Tables
         renderBracketTable('table-fed-ord', data.fed_ord_breakdown);
         renderBracketTable('table-fed-pref', data.fed_pref_breakdown);
         renderBracketTable('table-nys', data.nys_breakdown);
-        renderBracketTable('table-nyc', data.nyc_breakdown);
     };
 
-    // Render tables rows helper
     const renderBracketTable = (tableId, breakdown) => {
         const tbody = document.querySelector(`#${tableId} tbody`);
+        if (!tbody) return;
         tbody.innerHTML = '';
 
         if (!breakdown || breakdown.length === 0) {
             const tr = document.createElement('tr');
-            tr.innerHTML = `<td colspan="4" style="text-align: center; color: var(--text-secondary);">No income taxed in this category.</td>`;
+            tr.innerHTML = `<td colspan="4" style="text-align: center; color: var(--text-secondary);">No state income tax for this jurisdiction.</td>`;
             tbody.appendChild(tr);
             return;
         }
@@ -218,23 +281,17 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    // Attach listeners for reactive auto-calculation
     form.addEventListener('submit', (e) => {
         e.preventDefault();
-        triggerCalculation();
     });
 
-    inputs.forEach(input => {
-        input.addEventListener('input', () => {
-            triggerCalculation();
-        });
+    ['change', 'input'].forEach(evt => {
+        if (yearSelect) yearSelect.addEventListener(evt, triggerCalculation);
+        if (stateSelect) stateSelect.addEventListener(evt, triggerCalculation);
+        if (filingStatusSelect) filingStatusSelect.addEventListener(evt, triggerCalculation);
     });
 
-    yearSelect.addEventListener('change', () => {
-        updateYearLabels(yearSelect.value);
-        triggerCalculation();
-    });
+    inputs.forEach(input => input.addEventListener('input', triggerCalculation));
 
-    updateYearLabels(yearSelect.value);
     triggerCalculation();
 });
