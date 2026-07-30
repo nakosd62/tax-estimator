@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
 Multi-State & Multi-Filing Status Tax & IRMAA Estimator Server.
+Data loaded dynamically from tax_data.json
 """
 
 import http.server
@@ -12,238 +13,59 @@ import sys
 
 PORT = int(os.environ.get("PORT", 8001))
 
-# Federal Standard Deductions by Year & Filing Status
-FED_STANDARD_DEDUCTION = {
-    "2025": {"MFJ": 31500.0, "SINGLE": 15750.0, "MFS": 15750.0, "HOH": 23600.0},
-    "2026": {"MFJ": 32200.0, "SINGLE": 16100.0, "MFS": 16100.0, "HOH": 24150.0},
-    "2027": {"MFJ": 33000.0, "SINGLE": 16500.0, "MFS": 16500.0, "HOH": 24750.0},
-}
+def load_tax_data(file_path="tax_data.json"):
+    """Loads tax configuration from an external JSON file and replaces nulls with infinity."""
+    if not os.path.exists(file_path):
+        print(f"Error: Could not find '{file_path}'. Please place it in the same directory.")
+        sys.exit(1)
 
-# Federal NIIT Thresholds by Filing Status
-NIIT_THRESHOLDS = {
-    "MFJ": 250000.0,
-    "SINGLE": 200000.0,
-    "MFS": 125000.0,
-    "HOH": 200000.0
-}
+    with open(file_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
 
-# Federal Ordinary Brackets
-FED_ORDINARY = {
-    "2025": {
-        "MFJ": [
-            (23850.0, 0.10), (96950.0, 0.12), (206700.0, 0.22),
-            (394600.0, 0.24), (501050.0, 0.32), (751600.0, 0.35), (float('inf'), 0.37)
-        ],
-        "SINGLE": [
-            (11925.0, 0.10), (48475.0, 0.12), (103350.0, 0.22),
-            (197300.0, 0.24), (250525.0, 0.32), (626350.0, 0.35), (float('inf'), 0.37)
-        ],
-        "MFS": [
-            (11925.0, 0.10), (48475.0, 0.12), (103350.0, 0.22),
-            (197300.0, 0.24), (250525.0, 0.32), (375800.0, 0.35), (float('inf'), 0.37)
-        ],
-        "HOH": [
-            (17000.0, 0.10), (64850.0, 0.12), (103350.0, 0.22),
-            (197300.0, 0.24), (250500.0, 0.32), (626350.0, 0.35), (float('inf'), 0.37)
-        ]
-    },
-    "2026": {
-        "MFJ": [
-            (24800.0, 0.10), (100800.0, 0.12), (211400.0, 0.22),
-            (403550.0, 0.24), (512450.0, 0.32), (768700.0, 0.35), (float('inf'), 0.37)
-        ],
-        "SINGLE": [
-            (12400.0, 0.10), (50400.0, 0.12), (105700.0, 0.22),
-            (201775.0, 0.24), (256225.0, 0.32), (609350.0, 0.35), (float('inf'), 0.37)
-        ],
-        "MFS": [
-            (12400.0, 0.10), (50400.0, 0.12), (105700.0, 0.22),
-            (201775.0, 0.24), (256225.0, 0.32), (384350.0, 0.35), (float('inf'), 0.37)
-        ],
-        "HOH": [
-            (17700.0, 0.10), (67450.0, 0.12), (105700.0, 0.22),
-            (201750.0, 0.24), (256200.0, 0.32), (609350.0, 0.35), (float('inf'), 0.37)
-        ]
-    },
-    "2027": {
-        "MFJ": [
-            (25400.0, 0.10), (103300.0, 0.12), (216700.0, 0.22),
-            (413650.0, 0.24), (525250.0, 0.32), (787900.0, 0.35), (float('inf'), 0.37)
-        ],
-        "SINGLE": [
-            (12700.0, 0.10), (51650.0, 0.12), (108350.0, 0.22),
-            (206800.0, 0.24), (262600.0, 0.32), (624550.0, 0.35), (float('inf'), 0.37)
-        ],
-        "MFS": [
-            (12700.0, 0.10), (51650.0, 0.12), (108350.0, 0.22),
-            (206800.0, 0.24), (262600.0, 0.32), (393950.0, 0.35), (float('inf'), 0.37)
-        ],
-        "HOH": [
-            (18150.0, 0.10), (69150.0, 0.12), (108350.0, 0.22),
-            (206800.0, 0.24), (262600.0, 0.32), (624550.0, 0.35), (float('inf'), 0.37)
-        ]
-    }
-}
+    # Convert JS 'null' limits to Python float('inf')
+    def process_brackets(bracket_list):
+        processed = []
+        for limit, rate in bracket_list:
+            processed.append((float('inf') if limit is None else float(limit), rate))
+        return processed
 
-# Federal Preferential Brackets
-FED_PREFERENTIAL = {
-    "2025": {
-        "MFJ": [(96700.0, 0.00), (600050.0, 0.15), (float('inf'), 0.20)],
-        "SINGLE": [(48350.0, 0.00), (533400.0, 0.15), (float('inf'), 0.20)],
-        "MFS": [(48350.0, 0.00), (300025.0, 0.15), (float('inf'), 0.20)],
-        "HOH": [(64750.0, 0.00), (566700.0, 0.15), (float('inf'), 0.20)]
-    },
-    "2026": {
-        "MFJ": [(98900.0, 0.00), (613700.0, 0.15), (float('inf'), 0.20)],
-        "SINGLE": [(49450.0, 0.00), (545550.0, 0.15), (float('inf'), 0.20)],
-        "MFS": [(49450.0, 0.00), (306850.0, 0.15), (float('inf'), 0.20)],
-        "HOH": [(66250.0, 0.00), (579600.0, 0.15), (float('inf'), 0.20)]
-    },
-    "2027": {
-        "MFJ": [(101350.0, 0.00), (629050.0, 0.15), (float('inf'), 0.20)],
-        "SINGLE": [(50650.0, 0.00), (559200.0, 0.15), (float('inf'), 0.20)],
-        "MFS": [(50650.0, 0.00), (314500.0, 0.15), (float('inf'), 0.20)],
-        "HOH": [(67900.0, 0.00), (594100.0, 0.15), (float('inf'), 0.20)]
-    }
-}
+    # Parse Ordinary & Preferential Brackets
+    for year in data.get("FED_ORDINARY", {}):
+        for status in data["FED_ORDINARY"][year]:
+            data["FED_ORDINARY"][year][status] = process_brackets(data["FED_ORDINARY"][year][status])
 
-# Medicare IRMAA Surcharges by Status
-IRMAA_DATA = {
-    "2025": {
-        "MFJ": [
-            {"limit": 212000.0, "tier": 1, "part_b": 0.00, "part_d": 0.00},
-            {"limit": 266000.0, "tier": 2, "part_b": 74.00, "part_d": 13.70},
-            {"limit": 334000.0, "tier": 3, "part_b": 185.00, "part_d": 35.30},
-            {"limit": 400000.0, "tier": 4, "part_b": 295.90, "part_d": 57.00},
-            {"limit": 750000.0, "tier": 5, "part_b": 406.90, "part_d": 78.60},
-            {"limit": float('inf'), "tier": 6, "part_b": 443.90, "part_d": 85.80}
-        ],
-        "SINGLE": [
-            {"limit": 106000.0, "tier": 1, "part_b": 0.00, "part_d": 0.00},
-            {"limit": 133000.0, "tier": 2, "part_b": 74.00, "part_d": 13.70},
-            {"limit": 167000.0, "tier": 3, "part_b": 185.00, "part_d": 35.30},
-            {"limit": 200000.0, "tier": 4, "part_b": 295.90, "part_d": 57.00},
-            {"limit": 500000.0, "tier": 5, "part_b": 406.90, "part_d": 78.60},
-            {"limit": float('inf'), "tier": 6, "part_b": 443.90, "part_d": 85.80}
-        ]
-    },
-    "2026": {
-        "MFJ": [
-            {"limit": 218000.0, "tier": 1, "part_b": 0.00, "part_d": 0.00},
-            {"limit": 274000.0, "tier": 2, "part_b": 81.20, "part_d": 14.50},
-            {"limit": 342000.0, "tier": 3, "part_b": 202.90, "part_d": 37.50},
-            {"limit": 410000.0, "tier": 4, "part_b": 324.60, "part_d": 60.40},
-            {"limit": 750000.0, "tier": 5, "part_b": 446.30, "part_d": 83.30},
-            {"limit": float('inf'), "tier": 6, "part_b": 487.00, "part_d": 91.00}
-        ],
-        "SINGLE": [
-            {"limit": 109000.0, "tier": 1, "part_b": 0.00, "part_d": 0.00},
-            {"limit": 137000.0, "tier": 2, "part_b": 81.20, "part_d": 14.50},
-            {"limit": 171000.0, "tier": 3, "part_b": 202.90, "part_d": 37.50},
-            {"limit": 205000.0, "tier": 4, "part_b": 324.60, "part_d": 60.40},
-            {"limit": 500000.0, "tier": 5, "part_b": 446.30, "part_d": 83.30},
-            {"limit": float('inf'), "tier": 6, "part_b": 487.00, "part_d": 91.00}
-        ]
-    },
-    "2027": {
-        "MFJ": [
-            {"limit": 223450.0, "tier": 1, "part_b": 0.00, "part_d": 0.00},
-            {"limit": 280850.0, "tier": 2, "part_b": 81.20, "part_d": 14.50},
-            {"limit": 350550.0, "tier": 3, "part_b": 202.90, "part_d": 37.50},
-            {"limit": 420250.0, "tier": 4, "part_b": 324.60, "part_d": 60.40},
-            {"limit": 768750.0, "tier": 5, "part_b": 446.30, "part_d": 83.30},
-            {"limit": float('inf'), "tier": 6, "part_b": 487.00, "part_d": 91.00}
-        ],
-        "SINGLE": [
-            {"limit": 111725.0, "tier": 1, "part_b": 0.00, "part_d": 0.00},
-            {"limit": 140425.0, "tier": 2, "part_b": 81.20, "part_d": 14.50},
-            {"limit": 175275.0, "tier": 3, "part_b": 202.90, "part_d": 37.50},
-            {"limit": 210125.0, "tier": 4, "part_b": 324.60, "part_d": 60.40},
-            {"limit": 500000.0, "tier": 5, "part_b": 446.30, "part_d": 83.30},
-            {"limit": float('inf'), "tier": 6, "part_b": 487.00, "part_d": 91.00}
-        ]
-    }
-}
-# Map MFS/HOH to Single/MFJ IRMAA tables for simplicity
-IRMAA_DATA["2025"]["MFS"] = IRMAA_DATA["2025"]["SINGLE"]
-IRMAA_DATA["2025"]["HOH"] = IRMAA_DATA["2025"]["SINGLE"]
-IRMAA_DATA["2026"]["MFS"] = IRMAA_DATA["2026"]["SINGLE"]
-IRMAA_DATA["2026"]["HOH"] = IRMAA_DATA["2026"]["SINGLE"]
-IRMAA_DATA["2027"]["MFS"] = IRMAA_DATA["2027"]["SINGLE"]
-IRMAA_DATA["2027"]["HOH"] = IRMAA_DATA["2027"]["SINGLE"]
+    for year in data.get("FED_PREFERENTIAL", {}):
+        for status in data["FED_PREFERENTIAL"][year]:
+            data["FED_PREFERENTIAL"][year][status] = process_brackets(data["FED_PREFERENTIAL"][year][status])
 
-# State Tax Data
-STATE_TAX_DATA = {
-    # No Income Tax States
-    "AK": {"deduction": 0.0, "brackets": []},
-    "FL": {"deduction": 0.0, "brackets": []},
-    "NV": {"deduction": 0.0, "brackets": []},
-    "SD": {"deduction": 0.0, "brackets": []},
-    "TN": {"deduction": 0.0, "brackets": []},
-    "TX": {"deduction": 0.0, "brackets": []},
-    "WA": {"deduction": 0.0, "brackets": []},
-    "WY": {"deduction": 0.0, "brackets": []},
+    # Parse IRMAA Upper Limits
+    for year in data.get("IRMAA_DATA", {}):
+        for status in data["IRMAA_DATA"][year]:
+            for tier in data["IRMAA_DATA"][year][status]:
+                if tier["limit"] is None:
+                    tier["limit"] = float('inf')
 
-    # Flat Tax States
-    "AZ": {"deduction": 29200.0, "brackets": [(float('inf'), 0.0250)]},
-    "CO": {"deduction": 29200.0, "brackets": [(float('inf'), 0.0440)]},
-    "GA": {"deduction": 24000.0, "brackets": [(float('inf'), 0.0549)]},
-    "ID": {"deduction": 29200.0, "brackets": [(float('inf'), 0.05695)]},
-    "IL": {"deduction": 4850.0, "brackets": [(float('inf'), 0.0495)]},
-    "IN": {"deduction": 2000.0, "brackets": [(float('inf'), 0.0305)]},
-    "IA": {"deduction": 0.0, "brackets": [(float('inf'), 0.0380)]},
-    "KY": {"deduction": 3160.0, "brackets": [(float('inf'), 0.0400)]},
-    "MI": {"deduction": 11200.0, "brackets": [(float('inf'), 0.0425)]},
-    "NC": {"deduction": 25500.0, "brackets": [(float('inf'), 0.0450)]},
-    "ND": {"deduction": 29200.0, "brackets": [(113800.0, 0.00), (float('inf'), 0.0225)]},
-    "PA": {"deduction": 0.0, "brackets": [(float('inf'), 0.0307)]},
-    "UT": {"deduction": 0.0, "brackets": [(float('inf'), 0.0455)]},
+        # Map MFS/HOH to Single/MFJ tables if omitted
+        data["IRMAA_DATA"][year]["MFS"] = data["IRMAA_DATA"][year].get("MFS", data["IRMAA_DATA"][year]["SINGLE"])
+        data["IRMAA_DATA"][year]["HOH"] = data["IRMAA_DATA"][year].get("HOH", data["IRMAA_DATA"][year]["SINGLE"])
 
-    # Progressive Tax States
-    "CA": {
-        "deduction": 10726.0,
-        "brackets": [
-            (21000.0, 0.0100), (49800.0, 0.0200), (78600.0, 0.0400),
-            (109000.0, 0.0600), (137800.0, 0.0800), (703800.0, 0.0930),
-            (844600.0, 0.1030), (1000000.0, 0.1130), (float('inf'), 0.1230)
-        ]
-    },
-    "MA": {
-        "deduction": 8800.0,
-        "brackets": [(1000000.0, 0.0500), (float('inf'), 0.0900)]
-    },
-    "NJ": {
-        "deduction": 2000.0,
-        "brackets": [
-            (20000.0, 0.0140), (50000.0, 0.0175), (70000.0, 0.0245),
-            (80000.0, 0.0350), (150000.0, 0.05525), (500000.0, 0.0637),
-            (1000000.0, 0.0897), (float('inf'), 0.1075)
-        ]
-    },
-    "NY": {
-        "deduction": 16050.0,
-        "brackets": [
-            (17150.0, 0.0400), (23600.0, 0.0450), (27900.0, 0.0525),
-            (161550.0, 0.0550), (323200.0, 0.0600), (2155350.0, 0.0685),
-            (5000000.0, 0.0965), (25000000.0, 0.1030), (float('inf'), 0.1090)
-        ],
-        "nyc": [
-            (21600.0, 0.03078), (45000.0, 0.03762), (90000.0, 0.03819), (float('inf'), 0.03876)
-        ]
-    },
-    "OH": {
-        "deduction": 0.0,
-        "brackets": [(26050.0, 0.00), (100000.0, 0.0275), (float('inf'), 0.0350)]
-    },
-    "VA": {
-        "deduction": 9000.0,
-        "brackets": [(3000.0, 0.0200), (5000.0, 0.0300), (17000.0, 0.0500), (float('inf'), 0.0575)]
-    },
-    "WI": {
-        "deduction": 23800.0,
-        "brackets": [(18800.0, 0.0350), (37600.0, 0.0440), (413100.0, 0.0530), (float('inf'), 0.0765)]
-    }
-}
+    # Parse State Brackets
+    for state, info in data.get("STATE_TAX_DATA", {}).items():
+        if "brackets" in info:
+            info["brackets"] = process_brackets(info["brackets"])
+        if "nyc" in info:
+            info["nyc"] = process_brackets(info["nyc"])
+
+    return data
+
+# Load tax tables dynamically
+TAX_CONFIG = load_tax_data()
+FED_STANDARD_DEDUCTION = TAX_CONFIG["FED_STANDARD_DEDUCTION"]
+NIIT_THRESHOLDS = TAX_CONFIG["NIIT_THRESHOLDS"]
+FED_ORDINARY = TAX_CONFIG["FED_ORDINARY"]
+FED_PREFERENTIAL = TAX_CONFIG["FED_PREFERENTIAL"]
+IRMAA_DATA = TAX_CONFIG["IRMAA_DATA"]
+STATE_TAX_DATA = TAX_CONFIG["STATE_TAX_DATA"]
 
 
 def json_safe(value):
@@ -462,6 +284,7 @@ def run():
         print(f"=====================================================")
         print(f" Tax & IRMAA Estimator Server active at:")
         print(f" http://localhost:{PORT}")
+        print(f" Loaded tax parameters from tax_data.json")
         print(f" Press Ctrl+C to terminate.")
         print(f"=====================================================")
         try:
