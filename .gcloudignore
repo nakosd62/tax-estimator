@@ -1,0 +1,34 @@
+# Ignore Git repository
+.git/
+.gitignore
+
+# Ignore local virtual environment
+venv/
+
+# Ignore env setting
+.env
+.env-sample
+
+# Ignore utility scripts
+launch_app.sh
+kill_app.sh
+gcp_deploy.sh
+
+# Ignore testing files
+run_tests.sh
+tests/
+
+# Ignore README
+README.md
+
+# Ignore log files
+*.log
+
+# Ignore local Python cache and temporary files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*-save*
+*.save
+.DS_Store
