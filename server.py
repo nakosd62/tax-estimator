@@ -113,8 +113,8 @@ def calculate_progressive_tax(income: float, brackets: list) -> tuple[float, lis
     return tax, breakdown
 
 
-def calculate_preferential_tax(ord_income_taxable: float, cap_gains_taxable: float, pref_brackets: list) -> tuple[float, list[dict]]:
-    if cap_gains_taxable <= 0:
+def calculate_preferential_tax(ord_income_taxable: float, pref_income_taxable: float, pref_brackets: list) -> tuple[float, list[dict]]:
+    if pref_income_taxable <= 0:
         return 0.0, []
 
     tax = 0.0
@@ -123,7 +123,7 @@ def calculate_preferential_tax(ord_income_taxable: float, cap_gains_taxable: flo
 
     for limit, rate in pref_brackets:
         bracket_start = max(previous_limit, ord_income_taxable)
-        bracket_end = min(limit, ord_income_taxable + cap_gains_taxable)
+        bracket_end = min(limit, ord_income_taxable + pref_income_taxable)
 
         if bracket_end > bracket_start:
             taxable_in_bracket = bracket_end - bracket_start
@@ -145,7 +145,6 @@ def get_irmaa_tier(magi: float, irmaa_tiers: list) -> dict:
         if magi <= tier["limit"]:
             return tier
     return irmaa_tiers[-1]
-
 
 def perform_calculations(data: dict) -> dict:
     year = str(data.get("year", "2026"))
@@ -170,60 +169,83 @@ def perform_calculations(data: dict) -> dict:
 
     # Parse inputs
     wages = float(data.get("wages", 0))
+    other_income = float(data.get("other_income", 0))
     pension = float(data.get("pension", 0))
     ira_dist = float(data.get("ira_dist", 0))
     roth_conv = float(data.get("roth_conv", 0))
+    social_security = float(data.get("social_security", 0))
+    
     interest = float(data.get("interest", 0))
     ord_dividends = float(data.get("ordinary_dividends", 0))
     q_dividends = float(data.get("qualified_dividends", 0))
     tax_exempt = float(data.get("tax_exempt", 0))
+    
+    st_cap_gains = float(data.get("st_cap_gains", 0))
+    lt_cap_gains = float(data.get("lt_cap_gains", 0))
     
     fed_deductions = float(data.get("itemized_deductions", default_fed_deduction))
     state_deductions = state_params["deduction"]
 
     # Derived
     non_qualified_dividends = max(0.0, ord_dividends - q_dividends)
+    preferential_income = max(0.0, q_dividends + lt_cap_gains)
     
-    # 1. AGI
-    ordinary_income = wages + pension + ira_dist + roth_conv + interest + non_qualified_dividends
-    agi = ordinary_income + q_dividends
+    # Social Security Taxability Setup:
+    # 85% taxed at Federal level; 0% taxed at State level
+    taxable_ss_fed = social_security * 0.85
 
-    # 2. Taxable Income
-    fed_taxable = max(0.0, agi - fed_deductions)
-    state_taxable = max(0.0, agi - state_deductions)
+    # 1. Federal Ordinary Income & Federal AGI
+    # (wages + other_income + pension + ira_dist + roth_conv + interest + non_qualified_dividends + STCG + 85% SS)
+    fed_ordinary_income = (
+        wages + other_income + pension + ira_dist + roth_conv + 
+        interest + non_qualified_dividends + st_cap_gains + taxable_ss_fed
+    )
+    fed_agi = fed_ordinary_income + preferential_income
 
-    # 3. Federal Tax
-    pref_portion = min(q_dividends, fed_taxable)
+    # 2. State Ordinary Income & State AGI (Excludes 100% of Social Security)
+    state_ordinary_income = (
+        wages + other_income + pension + ira_dist + roth_conv + 
+        interest + non_qualified_dividends + st_cap_gains
+    )
+    state_agi = state_ordinary_income + preferential_income
+
+    # 3. Taxable Incomes
+    fed_taxable = max(0.0, fed_agi - fed_deductions)
+    state_taxable = max(0.0, state_agi - state_deductions)
+
+    # 4. Federal Tax Calculations
+    pref_portion = min(preferential_income, fed_taxable)
     ordinary_portion = max(0.0, fed_taxable - pref_portion)
 
     fed_ord_tax, fed_ord_breakdown = calculate_progressive_tax(ordinary_portion, fed_ord_brackets)
     fed_pref_tax, fed_pref_breakdown = calculate_preferential_tax(ordinary_portion, pref_portion, fed_pref_brackets)
     fed_tax = fed_ord_tax + fed_pref_tax
 
-    # 4. NIIT
-    nii = interest + ord_dividends
-    niit = 0.038 * min(nii, max(0.0, agi - niit_threshold))
+    # 5. Net Investment Income Tax (NIIT)
+    nii = interest + ord_dividends + max(0.0, st_cap_gains) + max(0.0, lt_cap_gains)
+    niit = 0.038 * min(nii, max(0.0, fed_agi - niit_threshold))
 
-    # 5. State Tax
+    # 6. State Tax Calculations
     state_tax, state_breakdown = calculate_progressive_tax(state_taxable, state_params["brackets"])
 
-    # 6. Local Tax (NY / NYC)
+    # 7. Local Tax (NY / NYC)
     nyc_tax, nyc_breakdown = 0.0, []
     if state_code == "NY":
         nyc_tax, nyc_breakdown = calculate_progressive_tax(state_taxable, state_params.get("nyc", []))
 
-    # 7. IRMAA
-    irmaa_magi = agi + tax_exempt
+    # 8. IRMAA Calculation (Uses Federal AGI + Tax Exempt Interest)
+    irmaa_magi = fed_agi + tax_exempt
     irmaa = get_irmaa_tier(irmaa_magi, irmaa_tiers)
 
     total_tax = fed_tax + niit + state_tax + nyc_tax
-    net_income = agi - total_tax
+    net_income = fed_agi - total_tax
 
     return {
         "year": year,
         "state": state_code,
         "filing_status": filing_status,
-        "agi": agi,
+        "agi": fed_agi,
+        "state_agi": state_agi,
         "non_qualified_dividends": non_qualified_dividends,
         "irmaa_magi": irmaa_magi,
         "fed_deduction": fed_deductions,
@@ -247,9 +269,9 @@ def perform_calculations(data: dict) -> dict:
         "irmaa_part_d": irmaa["part_d"],
         "total_tax": total_tax,
         "net_income": net_income,
-        "effective_rate": total_tax / agi if agi > 0 else 0.0
+        "effective_rate": total_tax / fed_agi if fed_agi > 0 else 0.0
     }
-
+    
 
 class TaxEstimatorHandler(http.server.SimpleHTTPRequestHandler):
     def log_message(self, format, *args):
