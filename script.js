@@ -184,17 +184,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // KPI Summary Cards
+
         const kpiTotalTax = document.getElementById('kpi-total-tax');
         if (kpiTotalTax) kpiTotalTax.innerText = formatCurrency(data.total_tax);
 
         const kpiEffRate = document.getElementById('kpi-eff-rate');
-        if (kpiEffRate) kpiEffRate.innerText = `${formatPercent(data.effective_rate)} Effective Rate`;
-
-        const kpiNetIncome = document.getElementById('kpi-net-income');
-        if (kpiNetIncome) kpiNetIncome.innerText = formatCurrency(data.net_income);
+        if (kpiEffRate) kpiEffRate.innerText = formatPercent(data.effective_rate);
 
         const kpiAgi = document.getElementById('kpi-agi');
-        if (kpiAgi) kpiAgi.innerText = `on ${formatCurrency(data.agi)} AGI`;
+        if (kpiAgi) kpiAgi.innerText = formatCurrency(data.agi);
 
         // Liabilities
         const liabFedTax = document.getElementById('liab-fed-tax');

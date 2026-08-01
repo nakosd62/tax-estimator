@@ -146,6 +146,7 @@ def get_irmaa_tier(magi: float, irmaa_tiers: list) -> dict:
             return tier
     return irmaa_tiers[-1]
 
+
 def perform_calculations(data: dict) -> dict:
     year = str(data.get("year", "2026"))
     if year not in FED_ORDINARY:
@@ -186,26 +187,43 @@ def perform_calculations(data: dict) -> dict:
     fed_deductions = float(data.get("itemized_deductions", default_fed_deduction))
     state_deductions = state_params["deduction"]
 
-    # Derived
+    # --- Capital Gain / Loss Netting & $3,000 Loss Cap Logic ---
+    max_loss_cap = 1500.0 if filing_status == "MFS" else 3000.0
+    net_cap_gain = st_cap_gains + lt_cap_gains
+
+    if net_cap_gain >= 0:
+        if st_cap_gains >= 0 and lt_cap_gains >= 0:
+            taxable_stcg = st_cap_gains
+            taxable_ltcg = lt_cap_gains
+        elif st_cap_gains < 0 and lt_cap_gains > 0:
+            taxable_stcg = 0.0
+            taxable_ltcg = net_cap_gain  # ST loss offsets LT gain
+        else:  # st_cap_gains > 0 and lt_cap_gains < 0
+            taxable_stcg = net_cap_gain  # LT loss offsets ST gain
+            taxable_ltcg = 0.0
+    else:
+        # Net loss is capped at -$3,000 (-$1,500 if MFS) against ordinary income
+        taxable_stcg = max(net_cap_gain, -max_loss_cap)
+        taxable_ltcg = 0.0
+
     non_qualified_dividends = max(0.0, ord_dividends - q_dividends)
-    preferential_income = max(0.0, q_dividends + lt_cap_gains)
+    preferential_income = max(0.0, q_dividends + taxable_ltcg)
     
     # Social Security Taxability Setup:
     # 85% taxed at Federal level; 0% taxed at State level
     taxable_ss_fed = social_security * 0.85
 
     # 1. Federal Ordinary Income & Federal AGI
-    # (wages + other_income + pension + ira_dist + roth_conv + interest + non_qualified_dividends + STCG + 85% SS)
     fed_ordinary_income = (
         wages + other_income + pension + ira_dist + roth_conv + 
-        interest + non_qualified_dividends + st_cap_gains + taxable_ss_fed
+        interest + non_qualified_dividends + taxable_stcg + taxable_ss_fed
     )
     fed_agi = fed_ordinary_income + preferential_income
 
-    # 2. State Ordinary Income & State AGI (Excludes 100% of Social Security)
+    # 2. State Ordinary Income & State AGI
     state_ordinary_income = (
         wages + other_income + pension + ira_dist + roth_conv + 
-        interest + non_qualified_dividends + st_cap_gains
+        interest + non_qualified_dividends + taxable_stcg
     )
     state_agi = state_ordinary_income + preferential_income
 
@@ -222,8 +240,10 @@ def perform_calculations(data: dict) -> dict:
     fed_tax = fed_ord_tax + fed_pref_tax
 
     # 5. Net Investment Income Tax (NIIT)
-    nii = interest + ord_dividends + max(0.0, st_cap_gains) + max(0.0, lt_cap_gains)
-    niit = 0.038 * min(nii, max(0.0, fed_agi - niit_threshold))
+    # Net capital gain/loss included in NII reflects netted gain or capped deduction
+    nii_cap_gain = max(net_cap_gain, -max_loss_cap)
+    nii = interest + ord_dividends + nii_cap_gain
+    niit = 0.038 * min(max(0.0, nii), max(0.0, fed_agi - niit_threshold))
 
     # 6. State Tax Calculations
     state_tax, state_breakdown = calculate_progressive_tax(state_taxable, state_params["brackets"])
@@ -233,7 +253,7 @@ def perform_calculations(data: dict) -> dict:
     if state_code == "NY":
         nyc_tax, nyc_breakdown = calculate_progressive_tax(state_taxable, state_params.get("nyc", []))
 
-    # 8. IRMAA Calculation (Uses Federal AGI + Tax Exempt Interest)
+    # 8. IRMAA Calculation
     irmaa_magi = fed_agi + tax_exempt
     irmaa = get_irmaa_tier(irmaa_magi, irmaa_tiers)
 

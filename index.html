@@ -221,17 +221,26 @@
 
             <!-- Right Panel: Outputs -->
             <section class="panel-right">
-                <!-- Summary KPI Cards -->
-                <div class="summary-kpi-grid">
-                    <div class="kpi-card bg-gradient-purple">
-                        <div class="kpi-label">Total Tax Liability</div>
-                        <div class="kpi-val" id="kpi-total-tax">$0.00</div>
-                        <div class="kpi-sub" id="kpi-eff-rate">0.00% Effective Rate</div>
-                    </div>
-                    <div class="kpi-card bg-gradient-green">
-                        <div class="kpi-label">Net After-Tax Income</div>
-                        <div class="kpi-val" id="kpi-net-income">$0.00</div>
-                        <div class="kpi-sub" id="kpi-agi">on $0.00 AGI</div>
+                <!-- Full-Width Summary KPI Banner -->
+                <div class="summary-kpi-container">
+                    <div class="kpi-card bg-gradient-purple full-width-kpi">
+                        <div class="kpi-content-side-by-side">
+                            <div class="kpi-block-main">
+                                <div class="kpi-label">Total Tax Liability</div>
+                                <div class="kpi-val" id="kpi-total-tax">$0.00</div>
+                            </div>
+                            <div class="kpi-divider"></div>
+                            <div class="kpi-block-sub">
+                                <div class="kpi-stat">
+                                    <span class="stat-label">Effective Tax Rate</span>
+                                    <span class="stat-val" id="kpi-eff-rate">0.00%</span>
+                                </div>
+                                <div class="kpi-stat">
+                                    <span class="stat-label">Federal AGI</span>
+                                    <span class="stat-val" id="kpi-agi">$0.00</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -378,6 +387,7 @@
                 </div>
 
             </section>
+
         </main>
     </div>
 
