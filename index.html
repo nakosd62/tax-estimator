@@ -15,35 +15,50 @@
 </head>
 <body>
     <div class="app-container">
-        <!-- Header -->
         <header class="app-header">
             <div class="header-logo">
                 <h1>Tax &amp; IRMAA Estimator</h1>
+                <span class="header-sub">New York City residents</span>
+            </div>
+            <div class="header-actions">
+                <span class="io-status" id="io-status" role="status" aria-live="polite"></span>
+                <span class="current-file" id="current-file" title="Inputs currently loaded"></span>
+                <div class="save-panel" id="save-panel" hidden>
+                    <label for="save-name" class="save-label">Save to data/</label>
+                    <input type="text" id="save-name" class="save-name" spellcheck="false" autocomplete="off">
+                    <button type="button" class="btn-primary-sm" id="btn-save-confirm">Save</button>
+                    <button type="button" class="btn-secondary" id="btn-save-cancel">Cancel</button>
+                </div>
+                <div class="menu-anchor">
+                    <button type="button" class="btn-secondary" id="btn-import" title="Load inputs from a JSON file" aria-haspopup="menu" aria-expanded="false">Import…</button>
+                    <div class="import-menu" id="import-menu" role="menu" hidden></div>
+                </div>
+                <button type="button" class="btn-secondary" id="btn-export" title="Save all inputs to a JSON file">Export</button>
+                <input type="file" id="import-file" accept="application/json,.json" hidden>
             </div>
         </header>
 
         <div id="error-banner" class="error-banner" hidden></div>
 
-        <!-- Main Content (2-Panel Grid) -->
-        <main class="main-content">
+        <main class="main-content" id="main-content">
             <!-- Left Panel: Inputs -->
             <section class="panel-left">
                 <div class="card glass-card">
-                    <form id="calculator-form" class="inputs-form">                        
-
+                    <form id="calculator-form" class="inputs-form">
                         <div class="form-section">
-                            <h3>Tax Year &amp; Location</h3>
-                            <div class="input-row dropdown-row">
-                                <div class="input-group year-group">
-                                    <label for="year">Year</label>
-                                    <select id="year" name="year" class="year-select compact-year" required>
+                            <h3>Household</h3>
+                            <input type="hidden" id="state" name="state" value="NY">
+                            <div class="input-row">
+                                <div class="input-group">
+                                    <label for="year">Tax year</label>
+                                    <select id="year" name="year" class="year-select" required>
                                         <option value="2025">2025</option>
                                         <option value="2026" selected>2026</option>
-                                        <option value="2027">2027</option>
+                                        <option value="2027">2027 (projected)</option>
                                     </select>
                                 </div>
-                                <div class="input-group flex-1">
-                                    <label for="filing_status">Filing Status</label>
+                                <div class="input-group">
+                                    <label for="filing_status">Filing status</label>
                                     <select id="filing_status" name="filing_status" class="year-select" required>
                                         <option value="MFJ" selected>Married Filing Jointly</option>
                                         <option value="SINGLE">Single</option>
@@ -51,177 +66,444 @@
                                         <option value="HOH">Head of Household</option>
                                     </select>
                                 </div>
-                                <div class="input-group flex-1">
-                                    <label for="state">State</label>
-                                    <select id="state" name="state" class="year-select" required>
-                                        <option value="AK">Alaska</option>
-                                        <option value="AZ">Arizona</option>
-                                        <option value="CA">California</option>
-                                        <option value="CO">Colorado</option>
-                                        <option value="FL">Florida</option>
-                                        <option value="GA">Georgia</option>
-                                        <option value="ID">Idaho</option>
-                                        <option value="IL">Illinois</option>
-                                        <option value="IN">Indiana</option>
-                                        <option value="IA">Iowa</option>
-                                        <option value="KY">Kentucky</option>
-                                        <option value="MA">Massachusetts</option>
-                                        <option value="MI">Michigan</option>
-                                        <option value="NV">Nevada</option>
-                                        <option value="NJ">New Jersey</option>
-                                        <option value="NY" selected>New York</option>
-                                        <option value="NC">North Carolina</option>
-                                        <option value="ND">North Dakota</option>
-                                        <option value="OH">Ohio</option>
-                                        <option value="PA">Pennsylvania</option>
-                                        <option value="SD">South Dakota</option>
-                                        <option value="TN">Tennessee</option>
-                                        <option value="TX">Texas</option>
-                                        <option value="UT">Utah</option>
-                                        <option value="VA">Virginia</option>
-                                        <option value="WA">Washington</option>
-                                        <option value="WI">Wisconsin</option>
-                                        <option value="WY">Wyoming</option>
+                            </div>
+                            <div class="input-row">
+                                <div class="input-group">
+                                    <label for="filers_65">Filers age 65+</label>
+                                    <select id="filers_65" name="filers_65" class="year-select">
+                                        <option value="0" selected>None</option>
+                                        <option value="1">One</option>
+                                        <option value="2" data-joint-only>Both</option>
                                     </select>
                                 </div>
-                                
+                                <div class="input-group">
+                                    <label for="filers_59">Filers age 59½+</label>
+                                    <select id="filers_59" name="filers_59" class="year-select">
+                                        <option value="0" selected>None</option>
+                                        <option value="1">One</option>
+                                        <option value="2" data-joint-only>Both</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="input-help" data-help-for="label[for=filers_65]">Each filer 65+ adds the extra standard deduction and, for 2025–2028, the $6,000 senior deduction (phased out above $75k / $150k MAGI).</div>
+                            <div class="input-help" data-help-for="label[for=filers_59]">Each filer 59½+ can exclude up to $20,000 of pension, IRA and Roth-conversion income from NY tax.</div>
+                        </div>
+                        <div class="form-section">
+                            <h3>Income — Wages &amp; Retirement</h3>
+                            <div class="input-row">
+                                <div class="input-group">
+                                    <label for="wages">Wages &amp; salaries</label>
+                                    <div class="input-wrapper">
+                                        <span class="currency-symbol">$</span>
+                                        <input type="number" id="wages" name="wages" value="0" min="0" step="any">
+                                    </div>
+                                </div>
+                                <div class="input-group">
+                                    <label for="other_income">Other income</label>
+                                    <div class="input-wrapper">
+                                        <span class="currency-symbol">$</span>
+                                        <input type="number" id="other_income" name="other_income" value="0" min="0" step="any">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="input-row">
+                                <div class="input-group">
+                                    <label for="ira_dist">Traditional IRA distributions</label>
+                                    <div class="input-wrapper">
+                                        <span class="currency-symbol">$</span>
+                                        <input type="number" id="ira_dist" name="ira_dist" value="0" min="0" step="any">
+                                    </div>
+                                </div>
+                                <div class="input-group">
+                                    <label for="roth_conv">Roth conversions</label>
+                                    <div class="input-wrapper">
+                                        <span class="currency-symbol">$</span>
+                                        <input type="number" id="roth_conv" name="roth_conv" value="0" min="0" step="any">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="input-row">
+                                <div class="input-group">
+                                    <label for="pension">Taxable pension</label>
+                                    <div class="input-wrapper">
+                                        <span class="currency-symbol">$</span>
+                                        <input type="number" id="pension" name="pension" value="0" min="0" step="any">
+                                    </div>
+                                    <div class="input-help" id="ny-exclusion-help" data-help-for="label[for=pension]"></div>
+                                </div>
+                                <div class="input-group">
+                                    <label for="social_security">Social Security benefits</label>
+                                    <div class="input-wrapper">
+                                        <span class="currency-symbol">$</span>
+                                        <input type="number" id="social_security" name="social_security" value="0" min="0" step="any">
+                                    </div>
+                                    <div class="input-help" id="ss-help" data-help-for="label[for=social_security]"></div>
+                                </div>
                             </div>
                         </div>
                         <div class="form-section">
-                            <h3>Ordinary Income</h3>
-                            <!-- Top Row: Wages & Other -->
+                            <h3>Income — Investments</h3>
                             <div class="input-row">
                                 <div class="input-group">
-                                    <label for="wages">Wages &amp; Salaries</label>
+                                    <label for="interest">Taxable interest</label>
                                     <div class="input-wrapper">
                                         <span class="currency-symbol">$</span>
-                                        <input type="number" id="wages" name="wages" value="0" min="0" step="any" required>
+                                        <input type="number" id="interest" name="interest" value="0" min="0" step="any">
                                     </div>
                                 </div>
-                        
                                 <div class="input-group">
-                                    <label for="other_income">Other Income</label>
+                                    <label for="tax_exempt">Tax-exempt interest</label>
                                     <div class="input-wrapper">
                                         <span class="currency-symbol">$</span>
-                                        <input type="number" id="other_income" name="other_income" value="0" min="0" step="any" required>
+                                        <input type="number" id="tax_exempt" name="tax_exempt" value="0" min="0" step="any">
                                     </div>
                                 </div>
                             </div>
-                            
-                            <!-- Middle Row: Trad IRA & Roth Conversions -->
                             <div class="input-row">
                                 <div class="input-group">
-                                    <label for="ira_dist">Traditional IRA Distributions</label>
+                                    <label for="ordinary_dividends">Ordinary dividends (total)</label>
                                     <div class="input-wrapper">
                                         <span class="currency-symbol">$</span>
-                                        <input type="number" id="ira_dist" name="ira_dist" value="120000" min="0" step="any" required>
+                                        <input type="number" id="ordinary_dividends" name="ordinary_dividends" value="0" min="0" step="any">
                                     </div>
                                 </div>
-                        
                                 <div class="input-group">
-                                    <label for="roth_conv">Roth Conversions</label>
+                                    <label for="qualified_dividends">…of which qualified</label>
                                     <div class="input-wrapper">
                                         <span class="currency-symbol">$</span>
-                                        <input type="number" id="roth_conv" name="roth_conv" value="50000" min="0" step="any" required>
+                                        <input type="number" id="qualified_dividends" name="qualified_dividends" value="0" min="0" step="any">
                                     </div>
                                 </div>
                             </div>
-                        
-                            <!-- Bottom Row: Pension & Social Security -->
                             <div class="input-row">
                                 <div class="input-group">
-                                    <label for="pension">Taxable Pension</label>
+                                    <label for="sec199a_dividends">…of which Section 199A (REIT)</label>
                                     <div class="input-wrapper">
                                         <span class="currency-symbol">$</span>
-                                        <input type="number" id="pension" name="pension" value="104000" min="0" step="any" required>
+                                        <input type="number" id="sec199a_dividends" name="sec199a_dividends" value="0" min="0" step="any">
                                     </div>
                                 </div>
-                        
                                 <div class="input-group">
-                                    <label for="social_security">Social Security</label>
+                                    <label for="treasury_interest">U.S. gov’t income (NY-exempt)</label>
                                     <div class="input-wrapper">
                                         <span class="currency-symbol">$</span>
-                                        <input type="number" id="social_security" name="social_security" value="0" min="0" step="any" required>
+                                        <input type="number" id="treasury_interest" name="treasury_interest" value="0" min="0" step="any">
                                     </div>
                                 </div>
                             </div>
+                            <div class="input-row">
+                                <div class="input-group">
+                                    <label for="oos_muni_interest">Out-of-state muni income</label>
+                                    <div class="input-wrapper">
+                                        <span class="currency-symbol">$</span>
+                                        <input type="number" id="oos_muni_interest" name="oos_muni_interest" value="0" min="0" step="any">
+                                    </div>
+                                </div>
+                                <div></div>
+                            </div>
+                            <div class="input-row">
+                                <div class="input-group">
+                                    <label for="st_cap_gains">Short-term capital gains</label>
+                                    <div class="input-wrapper">
+                                        <span class="currency-symbol">$</span>
+                                        <input type="number" id="st_cap_gains" name="st_cap_gains" value="0" step="any">
+                                    </div>
+                                </div>
+                                <div class="input-group">
+                                    <label for="lt_cap_gains">Long-term capital gains</label>
+                                    <div class="input-wrapper">
+                                        <span class="currency-symbol">$</span>
+                                        <input type="number" id="lt_cap_gains" name="lt_cap_gains" value="0" step="any">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="section-sub" id="h-carryforwards">Capital loss carryforward</div>
+                            <div class="input-help" data-help-for="#h-carryforwards">Unused capital losses from a prior year, from your Capital Loss Carryover Worksheet. Enter each as a positive number; it reduces this year's gain (or adds to the loss) of the matching type before the $3,000 ($1,500 MFS) yearly loss limit applies.</div>
+                            <div class="input-row">
+                                <div class="input-group">
+                                    <label for="cl_carryforward_st">Short-term loss carryforward</label>
+                                    <div class="input-wrapper">
+                                        <span class="currency-symbol">$</span>
+                                        <input type="number" id="cl_carryforward_st" name="cl_carryforward_st" value="0" min="0" step="any">
+                                    </div>
+                                </div>
+                                <div class="input-group">
+                                    <label for="cl_carryforward_lt">Long-term loss carryforward</label>
+                                    <div class="input-wrapper">
+                                        <span class="currency-symbol">$</span>
+                                        <input type="number" id="cl_carryforward_lt" name="cl_carryforward_lt" value="0" min="0" step="any">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="input-help" id="cl-carryforward-help" data-help-for="#h-carryforwards"></div>
                         </div>
-
                         <div class="form-section">
-                            <h3>Investment Income</h3>
-                            <div class="input-row">
-                                <div class="input-group">
-                                    <label for="interest">Taxable Interest</label>
-                                    <div class="input-wrapper">
-                                        <span class="currency-symbol">$</span>
-                                        <input type="number" id="interest" name="interest" value="5000" min="0" step="any" required>
+                            <h3 id="h-k1s">Income — K-1s (Partnerships / S-Corps)</h3>
+                            <div class="input-help" data-help-for="#h-k1s">Add one row per Schedule K-1. Box 1/2 trade-or-business/rental income or loss, interest, dividends, capital gains and box-13 portfolio deductions all flow into the matching totals above. Check "Suspended" if passive-activity, at-risk or basis limits keep that year's box 1/2 loss (or income) out of this year's return — it's then excluded from the totals instead of counted.</div>
+                            <div id="k1-rows"></div>
+                            <button type="button" class="btn-secondary" id="btn-add-k1">+ Add K-1</button>
+                            <div id="k1-summary" class="k1-summary"></div>
+                            <template id="k1-row-template">
+                                <div class="k1-row">
+                                    <div class="k1-row-head">
+                                        <input type="text" class="k1-label" data-k1-field="label" placeholder="Entity name (e.g. J-Ventures LLC)">
+                                        <button type="button" class="btn-remove-k1" title="Remove this K-1">&times;</button>
+                                    </div>
+                                    <div class="input-row k1-fields">
+                                        <div class="input-group">
+                                            <label>Ordinary business income/(loss) — box 1</label>
+                                            <div class="input-wrapper">
+                                                <span class="currency-symbol">$</span>
+                                                <input type="number" data-k1-field="ordinary_income" value="0" step="any">
+                                            </div>
+                                        </div>
+                                        <div class="input-group">
+                                            <label>Net rental real estate income/(loss) — box 2</label>
+                                            <div class="input-wrapper">
+                                                <span class="currency-symbol">$</span>
+                                                <input type="number" data-k1-field="net_rental" value="0" step="any">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="input-row k1-fields">
+                                        <div class="input-group">
+                                            <label>Interest — box 5</label>
+                                            <div class="input-wrapper">
+                                                <span class="currency-symbol">$</span>
+                                                <input type="number" data-k1-field="interest" value="0" step="any">
+                                            </div>
+                                        </div>
+                                        <div class="input-group">
+                                            <label>Royalties — box 7</label>
+                                            <div class="input-wrapper">
+                                                <span class="currency-symbol">$</span>
+                                                <input type="number" data-k1-field="royalties" value="0" min="0" step="any">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="input-row k1-fields">
+                                        <div class="input-group">
+                                            <label>Ordinary dividends — box 6a</label>
+                                            <div class="input-wrapper">
+                                                <span class="currency-symbol">$</span>
+                                                <input type="number" data-k1-field="ord_dividends" value="0" min="0" step="any">
+                                            </div>
+                                        </div>
+                                        <div class="input-group">
+                                            <label>…of which qualified — box 6b</label>
+                                            <div class="input-wrapper">
+                                                <span class="currency-symbol">$</span>
+                                                <input type="number" data-k1-field="qual_dividends" value="0" min="0" step="any">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="input-row k1-fields">
+                                        <div class="input-group">
+                                            <label>Net short-term cap. gain/(loss) — box 8</label>
+                                            <div class="input-wrapper">
+                                                <span class="currency-symbol">$</span>
+                                                <input type="number" data-k1-field="st_cap_gain" value="0" step="any">
+                                            </div>
+                                        </div>
+                                        <div class="input-group">
+                                            <label>Net long-term cap. gain/(loss) — box 9a</label>
+                                            <div class="input-wrapper">
+                                                <span class="currency-symbol">$</span>
+                                                <input type="number" data-k1-field="lt_cap_gain" value="0" step="any">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="input-row k1-fields">
+                                        <div class="input-group">
+                                            <label>Portfolio deductions — box 13 (e.g. code AE)</label>
+                                            <div class="input-wrapper">
+                                                <span class="currency-symbol">$</span>
+                                                <input type="number" data-k1-field="portfolio_deductions" value="0" min="0" step="any">
+                                            </div>
+                                        </div>
+                                        <div class="input-group k1-suspended-group">
+                                            <label class="checkbox-label">
+                                                <input type="checkbox" data-k1-field="suspended">
+                                                Loss suspended (passive/at-risk/basis limits)
+                                            </label>
+                                        </div>
                                     </div>
                                 </div>
-
-                                <div class="input-group">
-                                    <label for="tax_exempt">Tax-Exempt Interest</label>
-                                    <div class="input-wrapper">
-                                        <span class="currency-symbol">$</span>
-                                        <input type="number" id="tax_exempt" name="tax_exempt" value="20000" min="0" step="any" required>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="input-row">
-                                <div class="input-group">
-                                    <label for="ordinary_dividends">Ordinary Dividends (Total)</label>
-                                    <div class="input-wrapper">
-                                        <span class="currency-symbol">$</span>
-                                        <input type="number" id="ordinary_dividends" name="ordinary_dividends" value="100000" min="0" step="any" required>
-                                    </div>
-                                </div>
-
-                                <div class="input-group">
-                                    <label for="qualified_dividends">Qualified Portion</label>
-                                    <div class="input-wrapper">
-                                        <span class="currency-symbol">$</span>
-                                        <input type="number" id="qualified_dividends" name="qualified_dividends" value="90000" min="0" step="any" required>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="input-row">
-                                <div class="input-group">
-                                    <label for="st_cap_gains">ST Cap Gains</label>
-                                    <div class="input-wrapper">
-                                        <span class="currency-symbol">$</span>
-                                        <input type="number" id="st_cap_gains" name="st_cap_gains" value="0" step="any" required>
-                                    </div>
-                                </div>
-
-                                <div class="input-group">
-                                    <label for="lt_cap_gains">LT Cap Gains</label>
-                                    <div class="input-wrapper">
-                                        <span class="currency-symbol">$</span>
-                                        <input type="number" id="lt_cap_gains" name="lt_cap_gains" value="0" step="any" required>
-                                    </div>
-                                </div>
-                            </div>
+                            </template>
                         </div>
-
                         <div class="form-section">
-                            <h3>Deductions</h3>
-                            <div class="input-group">
-                                <label for="itemized_deductions">Federal Itemized Deductions</label>
-                                <div class="input-wrapper">
-                                    <span class="currency-symbol">$</span>
-                                    <input type="number" id="itemized_deductions" name="itemized_deductions" value="50000" min="0" step="any" required>
+                            <h3 id="h-deductions">Deductions — Itemized</h3>
+                            <div class="input-help" data-help-for="label[for=medical]">Include Medicare Part B/D premiums (and IRMAA surcharges), Medigap and other insurance premiums, and out-of-pocket costs. Federal counts the part above 7.5% of AGI; NY above 10%.</div>
+                            <div class="input-help" data-help-for="#h-deductions">Enter what you'd claim; the app compares against the standard deduction separately for federal and NY.</div>
+                            <div class="input-row">
+                                <div class="input-group">
+                                    <label for="medical">Medical &amp; dental</label>
+                                    <div class="input-wrapper">
+                                        <span class="currency-symbol">$</span>
+                                        <input type="number" id="medical" name="medical" value="0" min="0" step="any">
+                                    </div>
+                                </div>
+                                <div class="input-group">
+                                    <label for="salt_income">State &amp; local income taxes paid</label>
+                                    <div class="input-wrapper">
+                                        <span class="currency-symbol">$</span>
+                                        <input type="number" id="salt_income" name="salt_income" min="0" step="any" placeholder="Auto: NY payments">
+                                    </div>
+                                    <div class="input-help" id="salt-help" data-help-for="label[for=salt_income]"></div>
                                 </div>
                             </div>
+                            <div class="input-row">
+                                <div class="input-group">
+                                    <label for="real_estate_tax">Real estate taxes</label>
+                                    <div class="input-wrapper">
+                                        <span class="currency-symbol">$</span>
+                                        <input type="number" id="real_estate_tax" name="real_estate_tax" value="0" min="0" step="any">
+                                    </div>
+                                </div>
+                                <div class="input-group">
+                                    <label for="mortgage_interest">Mortgage interest</label>
+                                    <div class="input-wrapper">
+                                        <span class="currency-symbol">$</span>
+                                        <input type="number" id="mortgage_interest" name="mortgage_interest" value="0" min="0" step="any">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="input-row">
+                                <div class="input-group">
+                                    <label for="charity_cash">Charity — cash</label>
+                                    <div class="input-wrapper">
+                                        <span class="currency-symbol">$</span>
+                                        <input type="number" id="charity_cash" name="charity_cash" value="0" min="0" step="any">
+                                    </div>
+                                </div>
+                                <div class="input-group">
+                                    <label for="charity_other">Charity — stock, DAF, property</label>
+                                    <div class="input-wrapper">
+                                        <span class="currency-symbol">$</span>
+                                        <input type="number" id="charity_other" name="charity_other" value="0" min="0" step="any">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="input-row">
+                                <div class="input-group">
+                                    <label for="ny_misc_deductions">NY misc. deductions</label>
+                                    <div class="input-wrapper">
+                                        <span class="currency-symbol">$</span>
+                                        <input type="number" id="ny_misc_deductions" name="ny_misc_deductions" value="0" min="0" step="any">
+                                    </div>
+                                </div>
+                                <div></div>
+                            </div>
+                            <div class="input-help" id="fed-deduction-help" data-help-for="#h-deductions"></div>
+                            <div class="input-help" id="ny-deduction-help" data-help-for="#h-deductions"></div>
                         </div>
-
+                        <div class="form-section">
+                            <h3>Credits</h3>
+                            <div class="input-row">
+                                <div class="input-group">
+                                    <label for="foreign_tax_paid">Foreign tax paid</label>
+                                    <div class="input-wrapper">
+                                        <span class="currency-symbol">$</span>
+                                        <input type="number" id="foreign_tax_paid" name="foreign_tax_paid" value="0" min="0" step="any">
+                                    </div>
+                                    <div class="input-help" data-help-for="label[for=foreign_tax_paid]">From 1099-DIV box 7 (foreign tax withheld by international funds). Becomes a federal credit against income tax, not NIIT.</div>
+                                    <div class="input-help" id="ftc-help" data-help-for="label[for=foreign_tax_paid]"></div>
+                                </div>
+                                <div class="input-group">
+                                    <label for="ftc_carryforward">Foreign tax credit carryforward</label>
+                                    <div class="input-wrapper">
+                                        <span class="currency-symbol">$</span>
+                                        <input type="number" id="ftc_carryforward" name="ftc_carryforward" value="0" min="0" step="any">
+                                    </div>
+                                    <div class="input-help" data-help-for="label[for=ftc_carryforward]">Unused foreign tax credit carried forward from a prior year (Form 1116 Schedule B). Added to this year's foreign tax paid before the same credit limit applies.</div>
+                                </div>
+                            </div>
+                            <div class="input-row">
+                                <div class="input-group">
+                                    <label for="foreign_source_income">Foreign-source income</label>
+                                    <div class="input-wrapper">
+                                        <span class="currency-symbol">$</span>
+                                        <input type="number" id="foreign_source_income" name="foreign_source_income" value="0" min="0" step="any">
+                                    </div>
+                                    <div class="input-help" data-help-for="label[for=foreign_source_income]">Only needed once you're over $300/$600 or have a carryforward, which requires Form 1116. Your international fund(s) usually report this as a % of dividends that's foreign-source, or pull it from a prior Form 1116 line 18. Used to work out what share of your tax the credit is actually limited to — leaving it blank/zero when Form 1116 applies will understate the credit.</div>
+                                    <div class="input-help" id="ftc-1116-help" data-help-for="label[for=foreign_source_income]"></div>
+                                </div>
+                                <div></div>
+                            </div>
+                        </div>
+                        <div class="form-section">
+                            <h3>Payments</h3>
+                            <div class="input-row">
+                                <div class="input-group">
+                                    <label for="fed_withholding">Federal withholding</label>
+                                    <div class="input-wrapper">
+                                        <span class="currency-symbol">$</span>
+                                        <input type="number" id="fed_withholding" name="fed_withholding" value="0" min="0" step="any">
+                                    </div>
+                                </div>
+                                <div class="input-group">
+                                    <label for="fed_estimated">Federal estimated payments</label>
+                                    <div class="input-wrapper">
+                                        <span class="currency-symbol">$</span>
+                                        <input type="number" id="fed_estimated" name="fed_estimated" value="0" min="0" step="any">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="input-row">
+                                <div class="input-group">
+                                    <label for="ny_withholding">NY + NYC withholding</label>
+                                    <div class="input-wrapper">
+                                        <span class="currency-symbol">$</span>
+                                        <input type="number" id="ny_withholding" name="ny_withholding" value="0" min="0" step="any">
+                                    </div>
+                                </div>
+                                <div class="input-group">
+                                    <label for="ny_estimated">NY + NYC estimated payments</label>
+                                    <div class="input-wrapper">
+                                        <span class="currency-symbol">$</span>
+                                        <input type="number" id="ny_estimated" name="ny_estimated" value="0" min="0" step="any">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="input-help" data-help-for="label[for=treasury_interest]">Income from U.S. Treasury and agency obligations, whether received as interest or as fund dividends (e.g. the U.S.-government share of a government money market fund, from Fidelity’s fund tax info). It must already be included in taxable interest or ordinary dividends. Federally taxable; NY and NYC exempt it.</div>
+                            <div class="input-help" data-help-for="label[for=oos_muni_interest]">The part of tax-exempt interest from other states’ municipal bonds or muni funds (fund share = exempt dividends × (1 − NY %)). Must already be included in tax-exempt interest. Federally exempt; NY and NYC tax it.</div>
+                            <div class="input-help" data-help-for="label[for=sec199a_dividends]">1099-DIV box 5. Part of ordinary dividends. Gives a federal deduction of 20% of these dividends (limited to 20% of taxable income minus capital gains and qualified dividends). NY does not allow it.</div>
+                            <div class="input-help" data-help-for="label[for=ny_misc_deductions]">NY-only: investment advisory/management and account fees, tax-preparation fees paid this year, and K-1 portfolio deductions (box 13 code AE/W). Not deductible federally since 2018; NY allows the part above 2% of federal AGI, subject to NY’s high-income limits.</div>
+                            <div class="section-sub" id="h-prior-year">Prior year</div>
+                            <div class="input-help" data-help-for="#h-prior-year">Optional. Used for the underpayment safe harbor: paying 100% of last year's tax (110% if prior-year AGI was over $150k) avoids the penalty.</div>
+                            <div class="input-row">
+                                <div class="input-group">
+                                    <label for="prior_agi">Prior-year AGI</label>
+                                    <div class="input-wrapper">
+                                        <span class="currency-symbol">$</span>
+                                        <input type="number" id="prior_agi" name="prior_agi" min="0" step="any" placeholder="Optional">
+                                    </div>
+                                </div>
+                                <div class="input-group">
+                                    <label for="prior_fed_tax">Prior-year federal tax</label>
+                                    <div class="input-wrapper">
+                                        <span class="currency-symbol">$</span>
+                                        <input type="number" id="prior_fed_tax" name="prior_fed_tax" min="0" step="any" placeholder="Optional">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="input-row">
+                                <div class="input-group">
+                                    <label for="prior_ny_tax">Prior-year NY + NYC tax</label>
+                                    <div class="input-wrapper">
+                                        <span class="currency-symbol">$</span>
+                                        <input type="number" id="prior_ny_tax" name="prior_ny_tax" min="0" step="any" placeholder="Optional">
+                                    </div>
+                                </div>
+                                <div></div>
+                            </div>
+                        </div>
                     </form>
                 </div>
             </section>
 
             <!-- Right Panel: Outputs -->
             <section class="panel-right">
-                <!-- Full-Width Summary KPI Banner -->
                 <div class="summary-kpi-container">
                     <div class="kpi-card bg-gradient-purple full-width-kpi">
                         <div class="kpi-content-side-by-side">
@@ -239,150 +521,199 @@
                                     <span class="stat-label">Federal AGI</span>
                                     <span class="stat-val" id="kpi-agi">$0.00</span>
                                 </div>
+                                <div class="kpi-stat">
+                                    <span class="stat-label" id="kpi-balance-label">Balance Due</span>
+                                    <span class="stat-val" id="kpi-balance">$0.00</span>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Detailed Liabilities Card -->
-                <div class="card liabilities-card">
-                    <h2 class="card-title">Tax Breakdown</h2>
-                    <ul class="liabilities-list">
-                        <li>
-                            <div class="liab-row">
-                                <span class="label">Federal Income Tax</span>
-                                <span class="val font-semibold" id="liab-fed-tax">$0.00</span>
-                            </div>
-                        </li>
-                        <li>
-                            <div class="liab-row">
-                                <span class="label">Net Investment Income Tax (NIIT)</span>
-                                <span class="val" id="liab-niit-tax">$0.00</span>
-                            </div>
-                        </li>
-                        <li>
-                            <div class="liab-row">
-                                <span class="label" id="liab-state-label">State Income Tax</span>
-                                <span class="val font-semibold" id="liab-nys-tax">$0.00</span>
-                            </div>
-                        </li>
-                        <li id="liab-local-container">
-                            <div class="liab-row">
-                                <span class="label" id="liab-local-label">NYC Local Income Tax</span>
-                                <span class="val font-semibold" id="liab-nyc-tax">$0.00</span>
-                            </div>
-                        </li>
-                    </ul>
+                <div class="results-col">
+                    <!-- Detailed Liabilities Card -->
+                    <div class="card liabilities-card">
+                        <h2 class="card-title">Tax Breakdown</h2>
+                        <ul class="liabilities-list">
+                            <li><div class="liab-row"><span class="label">Federal Income Tax</span><span class="val" id="liab-fed-tax">$0.00</span></div></li>
+                            <li id="liab-ftc-row"><div class="liab-row"><span class="label">Foreign Tax Credit</span><span class="val" id="liab-ftc">$0.00</span></div></li>
+                            <li><div class="liab-row"><span class="label">Net Investment Income Tax (NIIT)</span><span class="val" id="liab-niit-tax">$0.00</span></div></li>
+                            <li class="subtotal"><div class="liab-row"><span class="label">Total Federal</span><span class="val font-semibold" id="liab-fed-total">$0.00</span></div></li>
+                            <li><div class="liab-row"><span class="label" id="liab-state-label">New York State Income Tax</span><span class="val" id="liab-nys-tax">$0.00</span></div></li>
+                            <li id="liab-local-container"><div class="liab-row"><span class="label" id="liab-local-label">NYC Local Income Tax</span><span class="val" id="liab-nyc-tax">$0.00</span></div></li>
+                            <li id="liab-school-row"><div class="liab-row"><span class="label" id="liab-school-label">NYC School Tax Credit</span><span class="val" id="liab-school">$0.00</span></div></li>
+                            <li class="subtotal"><div class="liab-row"><span class="label">Total NY + NYC</span><span class="val font-semibold" id="liab-ny-total">$0.00</span></div></li>
+                        </ul>
+                    </div>
+
+                    <!-- Deductions -->
+                    <div class="card">
+                        <h2 class="card-title" id="h-deductions-card">Deductions</h2>
+                            <table class="compare-table" id="ded">
+                                <thead><tr><th></th><th>Federal</th><th>NY + NYC</th></tr></thead>
+                                <tbody>
+                                        <tr><td>Medical (after floor)</td><td id="ded-medical-fed"></td><td id="ded-medical-ny"></td></tr>
+                                        <tr><td>Taxes</td><td id="ded-taxes-fed"></td><td id="ded-taxes-ny"></td></tr>
+                                        <tr><td>Mortgage interest</td><td id="ded-mortgage-fed"></td><td id="ded-mortgage-ny"></td></tr>
+                                        <tr><td>Charitable</td><td id="ded-charity-fed"></td><td id="ded-charity-ny"></td></tr>
+                                    <tr><td>Misc. (NY, above 2% of AGI)</td><td id="ded-misc-fed"></td><td id="ded-misc-ny"></td></tr>
+                                        <tr><td>High-income limits</td><td id="ded-limits-fed"></td><td id="ded-limits-ny"></td></tr>
+                                        <tr><td>Itemized total</td><td id="ded-itemized-fed"></td><td id="ded-itemized-ny"></td></tr>
+                                        <tr><td>Standard deduction</td><td id="ded-standard-fed"></td><td id="ded-standard-ny"></td></tr>
+                                        <tr><td>Deduction used</td><td id="ded-used-fed"></td><td id="ded-used-ny"></td></tr>
+                                        <tr><td>Senior / non-itemizer charity</td><td id="ded-extra-fed"></td><td id="ded-extra-ny"></td></tr>
+                                    <tr><td>REIT dividend (QBI) deduction</td><td id="ded-qbi-fed"></td><td id="ded-qbi-ny"></td></tr>
+                                </tbody>
+                            </table>
+                        <div class="input-help" data-help-for="#h-deductions-card">Federal: 7.5% medical floor, SALT cap, 0.5%-of-AGI charity floor and 2/37 limit (2026+). NY: 10% medical floor, no SALT cap, income taxes not deductible, Pease limit and NY itemized deduction adjustment.</div>
+                    </div>
                 </div>
 
-                <!-- Progressive Bracket Details (Accordion) -->
-                <div class="bracket-details-accordions">
-                    <h2 class="section-title">Marginal Bracket Breakdowns</h2>
+                <div class="results-col">
+                    <!-- Progressive Bracket Details (Accordion) -->
+                    <div class="bracket-details-accordions">
+                        <h2 class="section-title">Marginal Bracket Breakdowns</h2>
                     
-                    <details class="bracket-accordion">
-                        <summary>Federal Ordinary Income Brackets <span class="acc-tax" id="acc-tax-fed-ord">$0.00</span></summary>
-                        <div class="accordion-content">
-                            <table class="bracket-table" id="table-fed-ord">
-                                <thead>
-                                    <tr>
-                                        <th>Range</th>
-                                        <th>Taxable Amt</th>
-                                        <th>Rate</th>
-                                        <th>Tax Paid</th>
-                                    </tr>
-                                </thead>
-                                <tbody></tbody>
-                            </table>
-                        </div>
-                    </details>
+                        <details class="bracket-accordion">
+                            <summary>Federal Ordinary Income Brackets <span class="acc-tax" id="acc-tax-fed-ord">$0.00</span></summary>
+                            <div class="accordion-content">
+                                <table class="bracket-table" id="table-fed-ord">
+                                    <thead>
+                                        <tr>
+                                            <th>Range</th>
+                                            <th>Taxable Amt</th>
+                                            <th>Rate</th>
+                                            <th>Tax Paid</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </details>
 
-                    <details class="bracket-accordion">
-                        <summary>Federal Preferential Brackets (LTCG / Qual Div) <span class="acc-tax" id="acc-tax-fed-pref">$0.00</span></summary>
-                        <div class="accordion-content">
-                            <table class="bracket-table" id="table-fed-pref">
-                                <thead>
-                                    <tr>
-                                        <th>Range</th>
-                                        <th>Taxable Amt</th>
-                                        <th>Rate</th>
-                                        <th>Tax Paid</th>
-                                    </tr>
-                                </thead>
-                                <tbody></tbody>
-                            </table>
-                        </div>
-                    </details>
+                        <details class="bracket-accordion">
+                            <summary>Federal Preferential Brackets (LTCG / Qual Div) <span class="acc-tax" id="acc-tax-fed-pref">$0.00</span></summary>
+                            <div class="accordion-content">
+                                <table class="bracket-table" id="table-fed-pref">
+                                    <thead>
+                                        <tr>
+                                            <th>Range</th>
+                                            <th>Taxable Amt</th>
+                                            <th>Rate</th>
+                                            <th>Tax Paid</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </details>
 
-                    <details class="bracket-accordion" id="accordion-state">
-                        <summary><span id="summary-state-title">State Income Tax Brackets</span> <span class="acc-tax" id="acc-tax-nys">$0.00</span></summary>
-                        <div class="accordion-content">
-                            <table class="bracket-table" id="table-nys">
-                                <thead>
-                                    <tr>
-                                        <th>Range</th>
-                                        <th>Taxable Amt</th>
-                                        <th>Rate</th>
-                                        <th>Tax Paid</th>
-                                    </tr>
-                                </thead>
-                                <tbody></tbody>
-                            </table>
-                        </div>
-                    </details>
+                        <details class="bracket-accordion" id="accordion-state">
+                            <summary><span id="summary-state-title">State Income Tax Brackets</span> <span class="acc-tax" id="acc-tax-nys">$0.00</span></summary>
+                            <div class="accordion-content">
+                                <table class="bracket-table" id="table-nys">
+                                    <thead>
+                                        <tr>
+                                            <th>Range</th>
+                                            <th>Taxable Amt</th>
+                                            <th>Rate</th>
+                                            <th>Tax Paid</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </details>
 
-                    <details class="bracket-accordion" id="accordion-local">
-                        <summary><span id="summary-local-title">Local Income Tax Brackets</span> <span class="acc-tax" id="acc-tax-nyc">$0.00</span></summary>
-                        <div class="accordion-content">
-                            <table class="bracket-table" id="table-nyc">
-                                <thead>
-                                    <tr>
-                                        <th>Range</th>
-                                        <th>Taxable Amt</th>
-                                        <th>Rate</th>
-                                        <th>Tax Paid</th>
-                                    </tr>
-                                </thead>
-                                <tbody></tbody>
-                            </table>
-                        </div>
-                    </details>
-                </div>
-
-                <!-- Medicare IRMAA Surcharges -->
-                <div class="card irmaa-card">
-                    <div class="card-header">
-                        <h2 class="card-title" id="irmaa-title">Medicare IRMAA Tier (2026)</h2>
-                        <span class="irmaa-badge" id="irmaa-tier-badge">Tier 1</span>
-                    </div>
-                    
-                    <div class="irmaa-meter-wrapper">
-                        <div class="irmaa-meter">
-                            <div class="irmaa-marker" id="irmaa-marker-current"></div>
-                            <div class="irmaa-bracket-step active">T1</div>
-                            <div class="irmaa-bracket-step">T2</div>
-                            <div class="irmaa-bracket-step">T3</div>
-                            <div class="irmaa-bracket-step">T4</div>
-                            <div class="irmaa-bracket-step">T5</div>
-                            <div class="irmaa-bracket-step">T6</div>
-                        </div>
+                        <details class="bracket-accordion" id="accordion-local">
+                            <summary><span id="summary-local-title">Local Income Tax Brackets</span> <span class="acc-tax" id="acc-tax-nyc">$0.00</span></summary>
+                            <div class="accordion-content">
+                                <table class="bracket-table" id="table-nyc">
+                                    <thead>
+                                        <tr>
+                                            <th>Range</th>
+                                            <th>Taxable Amt</th>
+                                            <th>Rate</th>
+                                            <th>Tax Paid</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </details>
                     </div>
 
-                    <div class="irmaa-details-grid">
-                        <div class="irmaa-detail-item">
-                            <span class="label">IRMAA MAGI</span>
-                            <span class="val text-highlight" id="irmaa-magi-val">$0.00</span>
-                        </div>
-                        <div class="irmaa-detail-item">
-                            <span class="label">Part B Monthly (Per Person)</span>
-                            <span class="val" id="irmaa-part-b-val">$0.00</span>
-                        </div>
-                        <div class="irmaa-detail-item">
-                            <span class="label">Part D Monthly (Per Person)</span>
-                            <span class="val" id="irmaa-part-d-val">$0.00</span>
-                        </div>
+                    <!-- Payments & Balance Due -->
+                    <div class="card">
+                        <h2 class="card-title" id="h-payments-card">Payments &amp; Balance Due</h2>
+                            <table class="compare-table" id="pay">
+                                <thead><tr><th></th><th>Federal</th><th>NY + NYC</th></tr></thead>
+                                <tbody>
+                                        <tr><td>Total tax</td><td id="pay-total-fed"></td><td id="pay-total-ny"></td></tr>
+                                        <tr><td>Withholding</td><td id="pay-withholding-fed"></td><td id="pay-withholding-ny"></td></tr>
+                                        <tr><td>Estimated payments</td><td id="pay-estimated-fed"></td><td id="pay-estimated-ny"></td></tr>
+                                        <tr><td>Balance due / (refund)</td><td id="pay-balance-fed"></td><td id="pay-balance-ny"></td></tr>
+                                        <tr><td>Safe-harbor minimum</td><td id="pay-required-fed"></td><td id="pay-required-ny"></td></tr>
+                                        <tr><td>Underpayment penalty</td><td id="pay-status-fed"></td><td id="pay-status-ny"></td></tr>
+                                </tbody>
+                            </table>
+                        <div class="input-help" id="pay-help" data-help-for="#h-payments-card"></div>
                     </div>
-                    <div class="irmaa-yearly-msg" id="irmaa-annual-total">
-                        Total annual surcharge: $0.00/yr (per person)
+
+                    <!-- Medicare Expenses (base premiums + IRMAA surcharges + Medigap) -->
+                    <div class="card irmaa-card">
+                        <div class="card-header">
+                            <h2 class="card-title" id="irmaa-title">Medicare Expenses (2028)</h2>
+                        </div>
+
+                        <div class="irmaa-inline-row">
+                            <span class="row-label">Base premiums:</span>
+                            <span class="irmaa-inline-item">
+                                <span class="label">Part B</span>
+                                <span class="val" id="part-b-base-val">$0</span>
+                            </span>
+                            <span class="irmaa-inline-item">
+                                <span class="label">Part D (ref.)</span>
+                                <span class="val" id="part-d-base-val">$0</span>
+                            </span>
+                        </div>
+
+                        <div class="irmaa-inline-row irmaa-row-nowrap">
+                            <span class="row-label">Surcharges:</span>
+                            <span class="irmaa-inline-item">
+                                <span class="label">Part B</span>
+                                <span class="val" id="irmaa-part-b-val">$0</span>
+                            </span>
+                            <span class="irmaa-inline-item">
+                                <span class="label">Part D</span>
+                                <span class="val" id="irmaa-part-d-val">$0</span>
+                            </span>
+                            <span class="irmaa-inline-item irmaa-magi-item">
+                                <span class="label" id="irmaa-magi-label">MAGI (Tier 1)</span>
+                                <span class="val" id="irmaa-magi-val">$0</span>
+                            </span>
+                        </div>
+
+                        <div class="irmaa-inline-row">
+                            <span class="row-label">Medigap:</span>
+                            <span class="irmaa-inline-item">
+                                <label for="plan_g_premium" class="label">Plan G premium</label>
+                                <span class="input-wrapper irmaa-inline-input">
+                                    <span class="currency-symbol">$</span>
+                                    <input type="number" id="plan_g_premium" name="plan_g_premium" value="350" min="0" step="any">
+                                </span>
+                            </span>
+                        </div>
+                        <div class="input-help" id="plan-g-help" data-help-for="label[for=plan_g_premium]">Plan G has no federal base rate — it's a private policy priced by your insurer, state, age, and (outside guaranteed-issue windows) health. Pre-filled with a rough New York community-rated estimate (~$265–$650/mo depending on carrier and region); replace it with your actual premium or quote for an accurate total.</div>
+
+                        <div class="irmaa-inline-row">
+                            <span class="row-label">Total / mo:</span>
+                            <span class="irmaa-inline-item">
+                                <span class="label">All base + surcharges + Medigap</span>
+                                <span class="val" id="medicare-total-val">$0</span>
+                            </span>
+                        </div>
+                        <div class="input-help" id="irmaa-help" data-help-for="#irmaa-title"></div>
                     </div>
                 </div>
 
@@ -390,6 +721,8 @@
 
         </main>
     </div>
+
+    <div class="help-tip" id="help-tip" role="tooltip" hidden></div>
 
     <script src="script.js"></script>
 </body>

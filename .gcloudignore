@@ -1,22 +1,21 @@
 # Ignore Git repository
 .git/
 .gitignore
+.gcloudignore
 
 # Ignore local virtual environment
 venv/
 
-# Ignore env setting
-.env
-.env-sample
+# Ignore saved personal inputs (never deploy these)
+data/
+docs/
+forms/
+generate_forms.py
+parse_docs.py
 
 # Ignore utility scripts
-launch_app.sh
-kill_app.sh
+run_server.sh
 gcp_deploy.sh
-
-# Ignore testing files
-run_tests.sh
-tests/
 
 # Ignore README
 README.md
@@ -29,6 +28,4 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
-*-save*
-*.save
 .DS_Store

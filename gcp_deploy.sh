@@ -2,5 +2,5 @@
 
 gcloud run deploy tax-estimator \
   --source . \
-  --region us-central1 \
+  --region us-east1 \
   --allow-unauthenticated

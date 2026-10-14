@@ -31,7 +31,7 @@ body {
 }
 
 .app-container {
-    max-width: 1200px;
+    max-width: 1760px;
     margin: 0 auto;
     display: flex;
     flex-direction: column;
@@ -85,7 +85,7 @@ body {
 
 .panel-left {
     width: 100%;
-    max-width: 400px;
+    min-width: 0;
     display: flex;
     flex-direction: column;
 }
@@ -94,10 +94,50 @@ body {
     height: 100%;
 }
 
+.panel-right {
+    min-width: 0;
+}
+
+/* Stacked layout: inputs across the full width, results below */
+.panel-right {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+    align-items: start;
+}
+
+/* Two independent columns on desktop:
+   left = Tax Breakdown, Deductions; right = Bracket breakdowns, Payments */
 @media (min-width: 900px) {
-    .main-content {
-        grid-template-columns: max-content 1fr;
+    .panel-right {
+        grid-template-columns: 1fr 1fr;
     }
+}
+
+.panel-right > .summary-kpi-container {
+    grid-column: 1 / -1;
+}
+
+.results-col {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    min-width: 0;
+}
+
+.results-col > .bracket-details-accordions {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 0.75rem;
+    padding: 0.85rem;
+    box-shadow: var(--glass-shadow);
+}
+
+.results-col > .bracket-details-accordions .section-title {
+    margin: 0 0 0.2rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-primary);
 }
 
 /* Cards (Glassmorphism) */
@@ -122,9 +162,26 @@ body {
 
 /* Forms & Inputs */
 .inputs-form {
-    display: flex;
-    flex-direction: column;
-    gap: 0.65rem;
+    column-width: 300px;
+    column-gap: 1.25rem;
+    column-rule: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.inputs-form .form-section {
+    break-inside: avoid;
+    margin-bottom: 0.65rem;
+}
+
+.section-sub {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    margin: -0.1rem 0 0.15rem;
+}
+
+.header-sub {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-left: 0.5rem;
 }
 
 .form-section {
@@ -138,7 +195,6 @@ body {
 
 .form-section:last-of-type {
     border-bottom: none;
-    padding-bottom: 0;
 }
 
 .form-section h3 {
@@ -271,11 +327,6 @@ body {
 }
 
 /* Right Panel: Output Components */
-.panel-right {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-}
 
 /* KPI Summary Cards */
 .summary-kpi-grid {
@@ -334,7 +385,7 @@ body {
 .irmaa-card {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.3rem;
     padding: 0.75rem 1rem;
 }
 
@@ -530,7 +581,7 @@ body {
 }
 
 .acc-tax {
-    color: var(--primary-color);
+    color: var(--text-primary);
 }
 
 .accordion-content {
@@ -664,4 +715,572 @@ body {
         width: 100%;
         justify-content: space-between;
     }
+}
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+    margin-top: 0.2rem;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.checkbox-label input {
+    accent-color: var(--primary-color);
+    margin: 0;
+}
+
+/* Label may wrap in narrow columns rather than overflow */
+.input-group label {
+    white-space: normal;
+    line-height: 1.2;
+}
+
+.input-row > div:empty {
+    min-height: 1px;
+}
+
+/* Federal vs NY comparison tables */
+.compare-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.compare-table th,
+.compare-table td {
+    padding: 0.28rem 0.5rem;
+    text-align: right;
+}
+
+.compare-table th:first-child,
+.compare-table td:first-child {
+    text-align: left;
+    color: var(--text-secondary);
+}
+
+.compare-table th {
+    color: var(--text-secondary);
+    font-weight: 600;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.compare-table td {
+    color: #cbd5e1;
+}
+
+.compare-table tr.emph td {
+    color: var(--text-primary);
+    font-weight: 600;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.compare-table .ok { color: var(--emerald); }
+.compare-table .warn { color: #fda4af; }
+.compare-table .muted { color: var(--text-secondary); font-weight: 400; }
+
+.liabilities-list li.subtotal .label {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+/* Header actions: import / export */
+.app-header {
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-width: 0;
+}
+
+.btn-secondary {
+    background: rgba(99, 102, 241, 0.12);
+    color: #c7d2fe;
+    border: 1px solid rgba(99, 102, 241, 0.45);
+    border-radius: 0.375rem;
+    padding: 0.3rem 0.8rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: var(--transition-smooth);
+}
+
+.btn-secondary:hover,
+.btn-secondary:focus-visible {
+    background: rgba(99, 102, 241, 0.25);
+    color: #ffffff;
+    outline: none;
+}
+
+.io-status {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    max-width: 40vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Save-to-data panel and import menu */
+.save-panel {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+.save-panel[hidden] { display: none; }
+
+.save-label {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.save-name {
+    width: 20rem;
+    max-width: 40vw;
+    height: 30px;
+    background: rgba(15, 23, 42, 0.8);
+    border: 1px solid var(--border-color);
+    border-radius: 0.375rem;
+    color: var(--text-primary);
+    padding: 0.2rem 0.5rem;
+    font-size: 0.8rem;
+    font-family: inherit;
+}
+.save-name:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+.btn-primary-sm {
+    background: var(--primary-color);
+    color: #fff;
+    border: 1px solid var(--primary-color);
+    border-radius: 0.375rem;
+    padding: 0.3rem 0.8rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+}
+.btn-primary-sm:hover,
+.btn-primary-sm:focus-visible {
+    background: var(--primary-hover);
+    outline: none;
+}
+
+.menu-anchor {
+    position: relative;
+}
+
+.import-menu {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 6px);
+    z-index: 50;
+    min-width: 26rem;
+    max-width: 90vw;
+    max-height: 60vh;
+    overflow-y: auto;
+    background: #1e293b;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 0.5rem;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+    padding: 0.3rem;
+}
+.import-menu[hidden] { display: none; }
+
+.menu-head {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-secondary);
+    padding: 0.35rem 0.6rem 0.25rem;
+}
+
+.menu-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1rem;
+    width: 100%;
+    background: none;
+    border: none;
+    border-radius: 0.35rem;
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 0.82rem;
+    text-align: left;
+    padding: 0.4rem 0.6rem;
+    cursor: pointer;
+}
+.menu-item > span:first-child {
+    overflow-wrap: anywhere;
+}
+.menu-item:hover,
+.menu-item:focus-visible {
+    background: rgba(99, 102, 241, 0.2);
+    outline: none;
+}
+
+.menu-sub {
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.menu-sep {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.08);
+    margin: 0.25rem 0.2rem;
+}
+
+/* ---------- Compact input panel ---------- */
+.panel-left .card {
+    padding: 0.7rem 0.85rem 0.3rem;
+}
+.inputs-form {
+    column-gap: 1.1rem;
+}
+.inputs-form .form-section {
+    gap: 0.2rem;
+    padding-bottom: 0.45rem;
+    margin-bottom: 0.45rem;
+}
+.inputs-form .form-section h3 {
+    font-size: 0.66rem;
+    margin-bottom: 0.05rem;
+}
+.inputs-form .input-row {
+    gap: 0.3rem 0.4rem;
+    margin-bottom: 0;
+}
+.inputs-form .input-group {
+    gap: 0.08rem;
+}
+.inputs-form .input-group label {
+    font-size: 0.7rem;
+    line-height: 1.15;
+}
+.inputs-form .input-wrapper input,
+.inputs-form .year-select {
+    height: 25px;
+    font-size: 0.76rem;
+}
+.inputs-form .input-wrapper input {
+    padding-left: 1.15rem;
+}
+.inputs-form .currency-symbol {
+    font-size: 0.72rem;
+    left: 0.4rem;
+}
+.inputs-form .section-sub {
+    font-size: 0.66rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin: 0.15rem 0 0;
+}
+.inputs-form .checkbox-label {
+    font-size: 0.68rem;
+    margin-top: 0.15rem;
+}
+
+/* ---------- Help: text lives in hidden .input-help, shown as a popup ---------- */
+.input-help[data-help-for] {
+    display: none;
+}
+
+.help-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 0.9rem;
+    height: 0.9rem;
+    margin: -0.25rem 0 -0.25rem 0.3rem;
+    border-radius: 50%;
+    border: 1px solid rgba(148, 163, 184, 0.55);
+    color: var(--text-secondary);
+    font: italic 600 0.6rem/1 Georgia, 'Times New Roman', serif;
+    text-transform: none;
+    letter-spacing: 0;
+    vertical-align: 0.08em;
+    cursor: help;
+    user-select: none;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.help-icon[hidden] {
+    display: none;
+}
+.has-help:hover .help-icon,
+.help-icon:focus-visible {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: #fff;
+    outline: none;
+}
+
+.help-tip {
+    position: fixed;
+    z-index: 100;
+    max-width: 22rem;
+    padding: 0.5rem 0.65rem;
+    background: #0b1222;
+    border: 1px solid rgba(99, 102, 241, 0.5);
+    border-radius: 0.45rem;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5);
+    color: #e2e8f0;
+    font-size: 0.75rem;
+    font-weight: 400;
+    line-height: 1.4;
+    text-transform: none;
+    letter-spacing: normal;
+    white-space: pre-line;
+    pointer-events: none;
+}
+.help-tip[hidden] {
+    display: none;
+}
+
+/* Simple IRMAA summary */
+.irmaa-stats {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 0.5rem 1rem;
+    margin-top: 0.35rem;
+}
+.irmaa-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    flex: 1 1 0;
+    min-width: 0;
+}
+.irmaa-stat .label {
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+}
+.irmaa-stat .val {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+}
+.irmaa-stat .sub {
+    font-size: 0.68rem;
+    color: var(--text-secondary);
+}
+
+/* Inline label: value rows (Medicare Expenses card) */
+.irmaa-inline-row {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0.25rem 1.25rem;
+}
+.irmaa-inline-row .row-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-secondary);
+}
+.irmaa-inline-item {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.4rem;
+    white-space: nowrap;
+}
+.irmaa-inline-item .label {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+}
+.irmaa-inline-item .val {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+}
+.irmaa-inline-input {
+    width: 6.5rem;
+}
+.irmaa-inline-input input {
+    height: 24px;
+    font-size: 0.8rem;
+}
+
+.irmaa-row-nowrap {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+}
+.irmaa-magi-item .label {
+    font-size: 0.68rem;
+}
+.irmaa-magi-item .val {
+    font-size: 0.82rem;
+}
+
+.current-file {
+    font-size: 0.75rem;
+    color: #c7d2fe;
+    white-space: nowrap;
+    max-width: 28vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ---------- Results sized to match the input panel ----------
+   Headings: 0.66rem uppercase (like the input section headings); text & numbers: 0.76rem. */
+.panel-right .card {
+    padding: 0.7rem 0.85rem;
+}
+.panel-right .card-title,
+.panel-right .section-title,
+.panel-right .results-col > .bracket-details-accordions .section-title {
+    font-family: inherit;
+    font-size: 0.66rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-secondary);
+    margin-bottom: 0.3rem;
+}
+.panel-right .liabilities-list li {
+    padding: 0.18rem 0;
+}
+.panel-right .liab-row .label,
+.panel-right .liab-row .val {
+    font-size: 0.76rem;
+}
+.panel-right .compare-table {
+    font-size: 0.76rem;
+}
+.panel-right .compare-table th,
+.panel-right .compare-table td {
+    padding: 0.18rem 0.45rem;
+}
+.panel-right .bracket-accordion summary {
+    font-size: 0.76rem;
+    padding: 0.35rem 0.6rem;
+}
+.panel-right .bracket-table {
+    font-size: 0.72rem;
+}
+.panel-right .irmaa-stat .label {
+    font-size: 0.7rem;
+}
+.panel-right .irmaa-stat .val {
+    font-size: 0.76rem;
+}
+.panel-right .irmaa-inline-item .label {
+    font-size: 0.7rem;
+}
+.panel-right .irmaa-inline-item .val {
+    font-size: 0.76rem;
+}
+.panel-right .irmaa-magi-item .label {
+    font-size: 0.62rem;
+}
+.panel-right .irmaa-magi-item .val {
+    font-size: 0.7rem;
+}
+.panel-right .irmaa-badge {
+    font-size: 0.66rem;
+}
+
+/* Summary banner: same scale, total kept a bit larger */
+.panel-right .kpi-card {
+    padding: 0.55rem 0.85rem;
+}
+.panel-right .kpi-label,
+.panel-right .stat-label {
+    font-size: 0.66rem;
+}
+.panel-right .kpi-val {
+    font-size: 1.15rem;
+}
+.panel-right .stat-val {
+    font-size: 0.82rem;
+}
+
+/* ---------- K-1 rows ---------- */
+#k1-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 0.35rem;
+}
+.k1-row {
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 8px;
+    padding: 0.5rem 0.6rem 0.35rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    background: rgba(255, 255, 255, 0.02);
+}
+.k1-row-head {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+.k1-label {
+    flex: 1;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    color: var(--text-primary, #f1f5f9);
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 0.15rem 0.1rem;
+}
+.k1-label:focus {
+    outline: none;
+    border-bottom-color: #6366f1;
+}
+.btn-remove-k1 {
+    flex: 0 0 auto;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: transparent;
+    color: #cbd5e1;
+    font-size: 1rem;
+    line-height: 1;
+    cursor: pointer;
+}
+.btn-remove-k1:hover {
+    background: rgba(239, 68, 68, 0.15);
+    border-color: rgba(239, 68, 68, 0.4);
+    color: #fca5a5;
+}
+.k1-fields {
+    margin-bottom: 0;
+}
+.k1-suspended-group {
+    justify-content: flex-end;
+}
+.k1-suspended-group .checkbox-label {
+    font-size: 0.72rem;
+}
+#btn-add-k1 {
+    align-self: flex-start;
+}
+.k1-summary {
+    font-size: 0.72rem;
+    color: var(--text-secondary, #94a3b8);
+    line-height: 1.4;
+}
+.k1-summary:empty {
+    display: none;
 }
